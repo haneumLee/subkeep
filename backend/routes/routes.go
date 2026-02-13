@@ -10,8 +10,9 @@ import (
 
 // Handlers holds all handler instances used by the router.
 type Handlers struct {
-	Auth        *handlers.AuthHandler
-	AuthService *services.AuthService
+	Auth         *handlers.AuthHandler
+	Subscription *handlers.SubscriptionHandler
+	AuthService  *services.AuthService
 }
 
 // SetupRoutes configures all API routes on the Fiber app.
@@ -28,6 +29,15 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	authProtected.Post("/logout", h.Auth.Logout)
 	authProtected.Get("/me", h.Auth.GetMe)
 
-	// Protected routes placeholder for future resource endpoints.
-	_ = api.Group("", middleware.AuthMiddleware(h.AuthService))
+	// Protected routes.
+	protected := api.Group("", middleware.AuthMiddleware(h.AuthService))
+
+	// Subscription routes.
+	subs := protected.Group("/subscriptions")
+	subs.Get("/", h.Subscription.GetAll)
+	subs.Post("/", h.Subscription.Create)
+	subs.Get("/:id", h.Subscription.GetByID)
+	subs.Put("/:id", h.Subscription.Update)
+	subs.Delete("/:id", h.Subscription.Delete)
+	subs.Patch("/:id/satisfaction", h.Subscription.UpdateSatisfaction)
 }
