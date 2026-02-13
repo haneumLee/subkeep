@@ -186,6 +186,91 @@ export interface Recommendation {
   potentialSaving: number;
 }
 
+// ===== Calendar =====
+export interface CalendarSubscription {
+  subscriptionId: string;
+  serviceName: string;
+  amount: number;
+  monthlyAmount: number;
+  personalAmount: number;
+  billingCycle: string;
+  categoryName: string;
+  categoryColor: string;
+  autoRenew: boolean;
+}
+
+export interface CalendarDay {
+  date: string;
+  totalAmount: number;
+  subscriptions: CalendarSubscription[];
+}
+
+export interface MonthlyCalendar {
+  year: number;
+  month: number;
+  totalAmount: number;
+  totalCount: number;
+  remainingAmount: number;
+  remainingCount: number;
+  days: CalendarDay[];
+}
+
+export interface DayDetail {
+  date: string;
+  totalAmount: number;
+  subscriptions: CalendarSubscription[];
+}
+
+export interface UpcomingPayment {
+  date: string;
+  daysUntil: number;
+  subscriptionId: string;
+  serviceName: string;
+  amount: number;
+  personalAmount: number;
+  categoryName: string;
+  categoryColor: string;
+}
+
+// ===== Reports =====
+export interface MonthlyTrend {
+  year: number;
+  month: number;
+  amount: number;
+  count: number;
+}
+
+export interface AverageCost {
+  monthly: number;
+  annual: number;
+  weekly: number;
+}
+
+export interface ReportSummary {
+  totalSubscriptions: number;
+  activeCount: number;
+  pausedCount: number;
+  mostExpensive: string | null;
+  mostExpensiveAmount: number;
+  averageSatisfaction: number;
+}
+
+export interface ReportCategoryBreakdown {
+  categoryId: string;
+  categoryName: string;
+  color: string;
+  monthlyAmount: number;
+  percentage: number;
+  count: number;
+}
+
+export interface ReportOverview {
+  categoryBreakdown: ReportCategoryBreakdown[];
+  monthlyTrend: MonthlyTrend[];
+  averageCost: AverageCost;
+  summary: ReportSummary;
+}
+
 // ===== Auth =====
 export interface AuthTokens {
   accessToken: string;
