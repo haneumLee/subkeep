@@ -81,6 +81,11 @@ export default function LoginPage() {
     window.location.href = `${apiUrl}/auth/${provider}?redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
+  const handleDevLogin = () => {
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    window.location.href = `/api/v1/auth/dev-login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -139,6 +144,18 @@ export default function LoginPage() {
             </a>
             에 동의하게 됩니다
           </p>
+
+          {/* Dev Login - 개발 테스트 */}
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <Button
+              onClick={handleDevLogin}
+              className="w-full bg-slate-600 text-white hover:bg-slate-700"
+              variant="secondary"
+              size="lg"
+            >
+              🔧 개발 테스트 로그인
+            </Button>
+          </div>
         </div>
 
         {/* Features */}

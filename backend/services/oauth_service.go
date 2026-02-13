@@ -16,12 +16,16 @@ import (
 
 // OAuth provider endpoints.
 const (
+	googleAuthURL    = "https://accounts.google.com/o/oauth2/v2/auth"
 	googleTokenURL   = "https://oauth2.googleapis.com/token"
 	googleUserURL    = "https://www.googleapis.com/oauth2/v2/userinfo"
+	kakaoAuthURL     = "https://kauth.kakao.com/oauth/authorize"
 	kakaoTokenURL    = "https://kauth.kakao.com/oauth/token"
 	kakaoUserURL     = "https://kapi.kakao.com/v2/user/me"
+	naverAuthURL     = "https://nid.naver.com/oauth2.0/authorize"
 	naverTokenURL    = "https://nid.naver.com/oauth2.0/token"
 	naverUserURL     = "https://openapi.naver.com/v1/nid/me"
+	appleAuthURL     = "https://appleid.apple.com/auth/authorize"
 )
 
 // OAuthService handles OAuth provider integrations.
@@ -36,6 +40,52 @@ func NewOAuthService(oauthConfig config.OAuthConfig) *OAuthService {
 		oauthConfig: oauthConfig,
 		httpClient:  &http.Client{},
 	}
+}
+
+// GetAuthorizationURL returns the OAuth authorization URL for the given provider.
+func (s *OAuthService) GetAuthorizationURL(provider string, redirectURI string, state string) (string, error) {
+	if !isValidProvider(provider) {
+		return "", utils.ErrBadRequest("지원하지 않는 인증 제공자입니다: " + provider)
+	}
+
+	var authURL, clientID, scope string
+
+	switch provider {
+	case "google":
+		authURL = googleAuthURL
+		clientID = s.oauthConfig.Google.ClientID
+		scope = "openid email profile"
+	case "kakao":
+		authURL = kakaoAuthURL
+		clientID = s.oauthConfig.Kakao.ClientID
+		scope = "profile_nickname profile_image account_email"
+	case "naver":
+		authURL = naverAuthURL
+		clientID = s.oauthConfig.Naver.ClientID
+		scope = ""
+	case "apple":
+		authURL = appleAuthURL
+		clientID = s.oauthConfig.Apple.ClientID
+		scope = "name email"
+	default:
+		return "", utils.ErrBadRequest("지원하지 않는 인증 제공자입니다: " + provider)
+	}
+
+	if clientID == "" {
+		return "", utils.ErrBadRequest(provider + " OAuth가 구성되지 않았습니다")
+	}
+
+	params := url.Values{
+		"client_id":     {clientID},
+		"redirect_uri":  {redirectURI},
+		"response_type": {"code"},
+		"state":         {state},
+	}
+	if scope != "" {
+		params.Set("scope", scope)
+	}
+
+	return authURL + "?" + params.Encode(), nil
 }
 
 // ExchangeCode exchanges an authorization code for user info from the given provider.

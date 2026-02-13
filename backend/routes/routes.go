@@ -28,13 +28,17 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 
 	// Auth routes (public).
 	auth := api.Group("/auth")
-	auth.Post("/:provider/callback", h.Auth.OAuthCallback)
+	auth.Get("/dev-login", h.Auth.DevLogin)
 	auth.Post("/refresh", h.Auth.RefreshToken)
 
-	// Auth routes (protected).
+	// Auth routes (protected) — must be before /:provider to avoid conflict.
 	authProtected := auth.Group("", middleware.AuthMiddleware(h.AuthService))
 	authProtected.Post("/logout", h.Auth.Logout)
 	authProtected.Get("/me", h.Auth.GetMe)
+
+	// OAuth routes (public) — /:provider must be last to avoid catching /me, /refresh, etc.
+	auth.Get("/:provider", h.Auth.OAuthRedirect)
+	auth.Post("/:provider/callback", h.Auth.OAuthCallback)
 
 	// Protected routes.
 	protected := api.Group("", middleware.AuthMiddleware(h.AuthService))

@@ -30,6 +30,54 @@ type oauthCallbackRequest struct {
 	RedirectURI string `json:"redirectUri" validate:"required,url"`
 }
 
+// OAuthRedirect handles GET /api/v1/auth/:provider.
+// It constructs the OAuth authorization URL and redirects the user.
+func (h *AuthHandler) OAuthRedirect(c *fiber.Ctx) error {
+	provider := c.Params("provider")
+	if provider == "" {
+		return utils.Error(c, utils.ErrBadRequest("인증 제공자가 지정되지 않았습니다"))
+	}
+
+	redirectURI := c.Query("redirect_uri")
+	if redirectURI == "" {
+		return utils.Error(c, utils.ErrBadRequest("redirect_uri가 필요합니다"))
+	}
+
+	// Use provider as state so the callback page knows which provider was used.
+	authURL, err := h.oauthService.GetAuthorizationURL(provider, redirectURI, provider)
+	if err != nil {
+		slog.Error("failed to get authorization URL", "error", err, "provider", provider)
+		// Redirect back to frontend with error instead of showing JSON error
+		errorMsg := "OAuth가 구성되지 않았습니다. 개발 테스트 로그인을 사용해주세요."
+		return c.Redirect(redirectURI+"?error="+errorMsg+"&provider="+provider, fiber.StatusTemporaryRedirect)
+	}
+
+	return c.Redirect(authURL, fiber.StatusTemporaryRedirect)
+}
+
+// DevLogin handles GET /api/v1/auth/dev-login.
+// It creates a test user and returns tokens for development testing.
+// Only available in development mode.
+func (h *AuthHandler) DevLogin(c *fiber.Ctx) error {
+	oauthUser := &services.OAuthUser{
+		Provider:       "google",
+		ProviderUserID: "dev-test-user-001",
+		Email:          "dev@subkeep.test",
+		Nickname:       "개발 테스터",
+		AvatarURL:      "",
+	}
+
+	tokens, _, err := h.authService.HandleOAuthCallback("google", oauthUser)
+	if err != nil {
+		slog.Error("dev login failed", "error", err)
+		return utils.Error(c, utils.ErrInternal("개발 로그인에 실패했습니다"))
+	}
+
+	// Redirect to the callback page with tokens.
+	redirectURI := c.Query("redirect_uri", "http://localhost:3000/auth/callback")
+	return c.Redirect(redirectURI+"?dev_token="+tokens.AccessToken+"&dev_refresh="+tokens.RefreshToken+"&provider=google", fiber.StatusTemporaryRedirect)
+}
+
 // refreshTokenRequest represents the body of a refresh token request.
 type refreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken"`

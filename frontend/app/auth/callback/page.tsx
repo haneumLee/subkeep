@@ -34,8 +34,18 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleCallback = async () => {
       const code = searchParams.get('code');
-      const provider = searchParams.get('provider');
+      const provider = searchParams.get('provider') || searchParams.get('state');
       const errorParam = searchParams.get('error');
+
+      // Dev login bypass: tokens are passed directly via query params.
+      const devToken = searchParams.get('dev_token');
+      const devRefresh = searchParams.get('dev_refresh');
+      if (devToken && devRefresh) {
+        setTokens(devToken, devRefresh);
+        await refreshUser();
+        router.push('/dashboard');
+        return;
+      }
 
       if (errorParam) {
         setError(`인증 실패: ${errorParam}`);
@@ -54,9 +64,10 @@ function AuthCallbackContent() {
       }
 
       try {
+        const redirectUri = `${window.location.origin}/auth/callback`;
         const response = await post<LoginResponse>(
           `/auth/${provider}/callback`,
-          { code }
+          { code, redirectUri }
         );
 
         setTokens(response.tokens.accessToken, response.tokens.refreshToken);

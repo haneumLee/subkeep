@@ -45,8 +45,8 @@ module.exports = {
       },
       
       // Process management
-      instances: 2,              // Number of instances
-      exec_mode: 'cluster',      // Cluster mode for load balancing
+      instances: 1,              // Single instance for Go binary
+      exec_mode: 'fork',         // Fork mode for Go binary
       autorestart: true,         // Auto restart on crash
       watch: false,              // Disable watch in production
       max_memory_restart: '500M', // Restart if memory exceeds 500MB
@@ -72,9 +72,7 @@ module.exports = {
       exp_backoff_restart_delay: 100,
     },
     
-    // ==================== Frontend (if using SSR) ====================
-    // Uncomment if using Next.js SSR or similar
-    /*
+    // ==================== Frontend (Next.js SSR) ====================
     {
       name: 'subkeep-frontend',
       cwd: './frontend',
@@ -82,7 +80,7 @@ module.exports = {
       args: 'start',
       
       env_development: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'production',
         PORT: 3000,
       },
       env_production: {
@@ -91,7 +89,7 @@ module.exports = {
       },
       
       instances: 1,
-      exec_mode: 'cluster',
+      exec_mode: 'fork',
       autorestart: true,
       watch: false,
       max_memory_restart: '300M',
@@ -100,7 +98,6 @@ module.exports = {
       out_file: './logs/frontend-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     },
-    */
   ],
   
   // ==================== Deployment Configuration ====================
