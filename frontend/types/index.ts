@@ -130,6 +130,18 @@ export interface ApplySimulationRequest {
   subscriptionIds: string[];
 }
 
+export interface CombinedSimulationItem {
+  serviceName: string;
+  amount: number;
+  billingCycle: BillingCycle;
+  categoryId?: string;
+}
+
+export interface CombinedSimulationRequest {
+  cancelSubscriptionIds: string[];
+  addItems: CombinedSimulationItem[];
+}
+
 export interface LinkShareRequest {
   shareGroupId: string;
   splitType: SplitType;

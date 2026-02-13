@@ -5,6 +5,7 @@ import type {
   AddSimulationRequest,
   ApplySimulationRequest,
   CancelSimulationRequest,
+  CombinedSimulationRequest,
   SimulationResult,
 } from '@/types';
 
@@ -26,6 +27,17 @@ export function useCancelSimulation() {
 export function useAddSimulation() {
   return useMutation({
     mutationFn: (data: AddSimulationRequest) => post<SimulationResult>('/simulation/add', data),
+  });
+}
+
+/**
+ * 통합 시뮬레이션 훅
+ * 해지 + 추가를 동시에 시뮬레이션
+ */
+export function useCombinedSimulation() {
+  return useMutation({
+    mutationFn: (data: CombinedSimulationRequest) =>
+      post<SimulationResult>('/simulation/combined', data),
   });
 }
 

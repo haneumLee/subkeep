@@ -28,6 +28,20 @@ type AddSimulationRequest struct {
 	CategoryID   *string `json:"categoryId"`
 }
 
+// CombinedSimulationItem represents a virtual subscription to add in combined simulation.
+type CombinedSimulationItem struct {
+	ServiceName  string  `json:"serviceName" validate:"required,min=1,max=100"`
+	Amount       int     `json:"amount" validate:"required,gte=0,lte=9999999"`
+	BillingCycle string  `json:"billingCycle" validate:"required,oneof=weekly monthly yearly"`
+	CategoryID   *string `json:"categoryId"`
+}
+
+// CombinedSimulationRequest holds the body for combined (cancel + add) simulation.
+type CombinedSimulationRequest struct {
+	CancelSubscriptionIDs []string                 `json:"cancelSubscriptionIds"`
+	AddItems              []CombinedSimulationItem `json:"addItems"`
+}
+
 // ApplySimulationRequest holds the body for applying a simulation.
 type ApplySimulationRequest struct {
 	Action          string   `json:"action" validate:"required,oneof=cancel"`
@@ -204,6 +218,104 @@ func (s *SimulationService) SimulateAdd(userID string, req *AddSimulationRequest
 	diff := currentTotal - simulatedTotal // negative = cost increase
 
 	breakdown := buildCategoryBreakdown(categoryMap, simulatedTotal)
+
+	return &SimulationResult{
+		CurrentMonthlyTotal:   currentTotal,
+		SimulatedMonthlyTotal: simulatedTotal,
+		MonthlyDifference:     diff,
+		AnnualDifference:      diff * 12,
+		CategoryBreakdown:     breakdown,
+	}, nil
+}
+
+// SimulateCombined simulates both cancelling and adding subscriptions at once.
+func (s *SimulationService) SimulateCombined(userID string, req *CombinedSimulationRequest) (*SimulationResult, error) {
+	// Fetch all active subscriptions.
+	activeSubs, _, err := s.subRepo.FindByUserID(userID, repositories.SubscriptionFilter{
+		Status:  "active",
+		Page:    1,
+		PerPage: 100,
+	})
+	if err != nil {
+		slog.Error("시뮬레이션 구독 조회 실패", "userID", userID, "error", err)
+		return nil, utils.ErrInternal("시뮬레이션 데이터를 조회할 수 없습니다")
+	}
+
+	// Build cancel ID set.
+	cancelSet := make(map[string]bool, len(req.CancelSubscriptionIDs))
+	for _, id := range req.CancelSubscriptionIDs {
+		cancelSet[id] = true
+	}
+
+	// Validate cancel IDs belong to user.
+	if len(req.CancelSubscriptionIDs) > 0 {
+		foundIDs := make(map[string]bool)
+		for _, sub := range activeSubs {
+			if cancelSet[sub.ID.String()] {
+				foundIDs[sub.ID.String()] = true
+			}
+		}
+		for _, id := range req.CancelSubscriptionIDs {
+			if !foundIDs[id] {
+				return nil, utils.ErrNotFound("구독을 찾을 수 없습니다: " + id)
+			}
+		}
+	}
+
+	// Fetch subscription shares for the user.
+	shareMap := buildShareMap(s.shareRepo, userID)
+
+	// Calculate current total and simulated total (after cancels).
+	currentTotal := 0
+	simulatedTotal := 0
+	categoryMap := make(map[string]*categoryGroupData)
+
+	for _, sub := range activeSubs {
+		monthly := sub.MonthlyAmount()
+		personalMonthly := monthly
+		if share, ok := shareMap[sub.ID.String()]; ok {
+			personalMonthly = share.PersonalAmount(monthly)
+		}
+		currentTotal += personalMonthly
+
+		if cancelSet[sub.ID.String()] {
+			continue
+		}
+
+		simulatedTotal += personalMonthly
+		addToCategoryGroup(categoryMap, sub, personalMonthly)
+	}
+
+	// Add virtual items.
+	for _, item := range req.AddItems {
+		virtualMonthly := calcMonthlyAmount(item.Amount, models.BillingCycle(item.BillingCycle))
+
+		catID := "uncategorized"
+		catName := "미분류"
+		catColor := "#9E9E9E"
+		if item.CategoryID != nil && *item.CategoryID != "" {
+			catID = *item.CategoryID
+			catName = catID
+		}
+
+		if g, ok := categoryMap[catID]; ok {
+			g.amount += virtualMonthly
+			g.count++
+		} else {
+			categoryMap[catID] = &categoryGroupData{
+				categoryID:   catID,
+				categoryName: catName,
+				color:        catColor,
+				amount:       virtualMonthly,
+				count:        1,
+			}
+		}
+
+		simulatedTotal += virtualMonthly
+	}
+
+	breakdown := buildCategoryBreakdown(categoryMap, simulatedTotal)
+	diff := currentTotal - simulatedTotal
 
 	return &SimulationResult{
 		CurrentMonthlyTotal:   currentTotal,

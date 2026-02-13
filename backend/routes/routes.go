@@ -63,6 +63,7 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	simulation := protected.Group("/simulation")
 	simulation.Post("/cancel", h.Simulation.SimulateCancel)
 	simulation.Post("/add", h.Simulation.SimulateAdd)
+	simulation.Post("/combined", h.Simulation.SimulateCombined)
 	simulation.Post("/apply", h.Simulation.ApplySimulation)
 	simulation.Post("/undo", h.Simulation.UndoSimulation)
 

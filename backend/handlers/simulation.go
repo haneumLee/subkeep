@@ -67,6 +67,30 @@ func (h *SimulationHandler) SimulateAdd(c *fiber.Ctx) error {
 	return utils.Success(c, result)
 }
 
+// SimulateCombined handles POST /api/v1/simulation/combined.
+func (h *SimulationHandler) SimulateCombined(c *fiber.Ctx) error {
+	userID, err := getUserID(c)
+	if err != nil {
+		return utils.Error(c, err.(*utils.AppError))
+	}
+
+	var req services.CombinedSimulationRequest
+	if err := c.BodyParser(&req); err != nil {
+		slog.Warn("통합 시뮬레이션 요청 파싱 실패", "error", err)
+		return utils.Error(c, utils.ErrBadRequest("요청 본문을 파싱할 수 없습니다"))
+	}
+
+	result, svcErr := h.service.SimulateCombined(userID, &req)
+	if svcErr != nil {
+		if appErr, ok := svcErr.(*utils.AppError); ok {
+			return utils.Error(c, appErr)
+		}
+		return utils.Error(c, utils.ErrInternal("시뮬레이션을 수행할 수 없습니다"))
+	}
+
+	return utils.Success(c, result)
+}
+
 // ApplySimulation handles POST /api/v1/simulation/apply.
 func (h *SimulationHandler) ApplySimulation(c *fiber.Ctx) error {
 	userID, err := getUserID(c)
