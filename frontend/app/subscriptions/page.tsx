@@ -65,23 +65,22 @@ export default function SubscriptionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">구독 관리</h1>
-            <p className="mt-1 text-gray-600">
-              전체 {subscriptionsData?.meta.total || 0}개의 구독
-            </p>
-          </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-          >
-            + 구독 추가
-          </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">구독 관리</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            전체 {subscriptionsData?.meta.total || 0}개의 구독
+          </p>
         </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+        >
+          + 구독 추가
+        </button>
+      </div>
 
         {/* Filters */}
         <div className="mb-6 rounded-lg border-2 border-gray-200 bg-white p-4">
@@ -236,7 +235,6 @@ export default function SubscriptionsPage() {
             </button>
           </div>
         )}
-      </div>
 
       {/* Subscription Form Modal */}
       <SubscriptionForm

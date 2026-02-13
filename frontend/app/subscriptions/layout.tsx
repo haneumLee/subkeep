@@ -2,6 +2,6 @@ import type { ReactNode } from 'react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 
-export default function SimulationLayout({ children }: { children: ReactNode }) {
+export default function SubscriptionsLayout({ children }: { children: ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
