@@ -13,6 +13,40 @@ import (
 var _ = time.Now
 
 // ---------------------------------------------------------------------------
+// Mock SubscriptionShareRepository for dashboard tests
+// ---------------------------------------------------------------------------
+
+type mockShareRepoForDashboard struct {
+	shares map[string]*models.SubscriptionShare
+}
+
+func newMockShareRepo() *mockShareRepoForDashboard {
+	return &mockShareRepoForDashboard{
+		shares: make(map[string]*models.SubscriptionShare),
+	}
+}
+
+func (m *mockShareRepoForDashboard) FindByID(id string) (*models.SubscriptionShare, error) {
+	return nil, nil
+}
+func (m *mockShareRepoForDashboard) FindBySubscriptionID(subscriptionID string) (*models.SubscriptionShare, error) {
+	return nil, nil
+}
+func (m *mockShareRepoForDashboard) FindByUserID(userID string) ([]*models.SubscriptionShare, error) {
+	var result []*models.SubscriptionShare
+	for _, s := range m.shares {
+		result = append(result, s)
+	}
+	return result, nil
+}
+func (m *mockShareRepoForDashboard) Create(share *models.SubscriptionShare) error  { return nil }
+func (m *mockShareRepoForDashboard) Update(share *models.SubscriptionShare) error  { return nil }
+func (m *mockShareRepoForDashboard) Delete(id string) error                        { return nil }
+func (m *mockShareRepoForDashboard) DeleteBySubscriptionID(subscriptionID string) error {
+	return nil
+}
+
+// ---------------------------------------------------------------------------
 // Helper: seed subscription with category and satisfaction score
 // ---------------------------------------------------------------------------
 
@@ -70,7 +104,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("returns correct monthly and annual totals for active subscriptions", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -84,7 +119,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("correctly counts active and paused subscriptions", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -100,7 +136,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("correctly groups subscriptions by category with percentage", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		entertainment := makeCategory("Entertainment", "#FF5722")
 		music := makeCategory("Music", "#2196F3")
@@ -137,7 +174,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("handles zero subscriptions (empty state)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		summary, err := svc.GetSummary(userID.String())
 		assertNil(t, err)
@@ -151,7 +189,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("handles subscriptions without categories (uncategorized)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -168,7 +207,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("handles mixed billing cycles (weekly, monthly, yearly)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		// monthly: 10000 → 10000
 		// yearly: 120000 → 120000/12 = 10000
@@ -187,7 +227,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("only includes active subscriptions in total calculation", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusPaused, nil, nil)
@@ -203,7 +244,8 @@ func TestGetSummary(t *testing.T) {
 
 	t.Run("sorts category breakdown by amount descending", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		catA := makeCategory("Cheap", "#111111")
 		catB := makeCategory("Mid", "#222222")
@@ -232,7 +274,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("returns empty list when no subscriptions", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		recs, err := svc.GetRecommendations(userID.String())
 		assertNil(t, err)
@@ -242,7 +285,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("recommends subscriptions with satisfaction score 1-2", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "BadService", 5000, models.BillingCycleMonthly, models.SubscriptionStatusActive, intPtr(1), nil)
 		repo.seedSubscriptionWithDetails(userID, "MehService", 5000, models.BillingCycleMonthly, models.SubscriptionStatusActive, intPtr(2), nil)
@@ -262,7 +306,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("recommends high-cost low-satisfaction subscriptions (top 20% cost + satisfaction <= 3)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		// 10 subscriptions: top 20% = top 2 by cost.
 		// Satisfaction 3 with high cost → should be recommended.
@@ -291,7 +336,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("does NOT recommend satisfaction 4-5 subscriptions", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Great", 50000, models.BillingCycleMonthly, models.SubscriptionStatusActive, intPtr(4), nil)
 		repo.seedSubscriptionWithDetails(userID, "Excellent", 90000, models.BillingCycleMonthly, models.SubscriptionStatusActive, intPtr(5), nil)
@@ -303,7 +349,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("sorts recommendations by satisfaction ASC then amount DESC", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		// Create enough subscriptions so cost threshold logic works.
 		// We want all of these to be recommended, so use satisfaction <= 2.
@@ -326,7 +373,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("handles subscriptions with nil satisfaction score", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "NoScore", 50000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		repo.seedSubscriptionWithDetails(userID, "BadScore", 5000, models.BillingCycleMonthly, models.SubscriptionStatusActive, intPtr(1), nil)
@@ -341,7 +389,8 @@ func TestGetRecommendations(t *testing.T) {
 
 	t.Run("returns annual saving correctly (monthly * 12)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewDashboardService(repo)
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "BadSub", 15000, models.BillingCycleMonthly, models.SubscriptionStatusActive, intPtr(1), nil)
 
@@ -350,5 +399,98 @@ func TestGetRecommendations(t *testing.T) {
 		assertEqual(t, len(recs), 1)
 		assertEqual(t, recs[0].MonthlyAmount, 15000)
 		assertEqual(t, recs[0].AnnualSaving, 15000*12)
+	})
+}
+
+// ===========================================================================
+// GetSummary with SubscriptionShare
+// ===========================================================================
+
+func TestGetSummaryWithShares(t *testing.T) {
+	userID := uuid.New()
+
+	t.Run("equal split reduces monthly total by member count", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
+
+		// Netflix 17000/month, shared equally among 4 members → 17000/4 = 4250
+		sub := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+		// Spotify 10900/month, no share → 10900
+		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		shareRepo.shares[uuid.New().String()] = &models.SubscriptionShare{
+			ID:                   uuid.New(),
+			SubscriptionID:       sub.ID,
+			SplitType:            models.SplitTypeEqual,
+			TotalMembersSnapshot: 4,
+		}
+
+		summary, err := svc.GetSummary(userID.String())
+		assertNil(t, err)
+		assertNotNil(t, summary)
+		// 4250 + 10900 = 15150
+		assertEqual(t, summary.MonthlyTotal, 15150)
+		assertEqual(t, summary.AnnualTotal, 15150*12)
+	})
+
+	t.Run("custom_amount uses myShareAmount for monthly total", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
+
+		// Netflix 17000/month, custom_amount = 5000
+		sub := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		shareRepo.shares[uuid.New().String()] = &models.SubscriptionShare{
+			ID:                   uuid.New(),
+			SubscriptionID:       sub.ID,
+			SplitType:            models.SplitTypeCustomAmount,
+			MyShareAmount:        intPtr(5000),
+			TotalMembersSnapshot: 3,
+		}
+
+		summary, err := svc.GetSummary(userID.String())
+		assertNil(t, err)
+		assertNotNil(t, summary)
+		assertEqual(t, summary.MonthlyTotal, 5000)
+	})
+
+	t.Run("custom_ratio uses monthlyAmount * ratio for monthly total", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
+
+		// Netflix 20000/month, custom_ratio = 0.3 → 20000 * 0.3 = 6000
+		sub := repo.seedSubscriptionWithDetails(userID, "Netflix", 20000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		ratio := 0.3
+		shareRepo.shares[uuid.New().String()] = &models.SubscriptionShare{
+			ID:                   uuid.New(),
+			SubscriptionID:       sub.ID,
+			SplitType:            models.SplitTypeCustomRatio,
+			MyShareRatio:         &ratio,
+			TotalMembersSnapshot: 3,
+		}
+
+		summary, err := svc.GetSummary(userID.String())
+		assertNil(t, err)
+		assertNotNil(t, summary)
+		assertEqual(t, summary.MonthlyTotal, 6000)
+	})
+
+	t.Run("subscriptions without share use full amount", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepo()
+		svc := NewDashboardService(repo, shareRepo)
+
+		// No shares configured — full amount should be used
+		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		summary, err := svc.GetSummary(userID.String())
+		assertNil(t, err)
+		assertNotNil(t, summary)
+		assertEqual(t, summary.MonthlyTotal, 27900)
 	})
 }

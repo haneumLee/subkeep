@@ -10,13 +10,16 @@ import (
 
 // Handlers holds all handler instances used by the router.
 type Handlers struct {
-	Auth         *handlers.AuthHandler
-	Subscription *handlers.SubscriptionHandler
-	Dashboard    *handlers.DashboardHandler
-	Simulation   *handlers.SimulationHandler
-	Category     *handlers.CategoryHandler
-	ShareGroup   *handlers.ShareGroupHandler
-	AuthService  *services.AuthService
+	Auth              *handlers.AuthHandler
+	Subscription      *handlers.SubscriptionHandler
+	Dashboard         *handlers.DashboardHandler
+	Simulation        *handlers.SimulationHandler
+	Calendar          *handlers.CalendarHandler
+	Category          *handlers.CategoryHandler
+	ShareGroup        *handlers.ShareGroupHandler
+	SubscriptionShare *handlers.SubscriptionShareHandler
+	Report            *handlers.ReportHandler
+	AuthService       *services.AuthService
 }
 
 // SetupRoutes configures all API routes on the Fiber app.
@@ -55,6 +58,13 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	simulation.Post("/cancel", h.Simulation.SimulateCancel)
 	simulation.Post("/add", h.Simulation.SimulateAdd)
 	simulation.Post("/apply", h.Simulation.ApplySimulation)
+	simulation.Post("/undo", h.Simulation.UndoSimulation)
+
+	// Calendar routes.
+	calendar := protected.Group("/calendar")
+	calendar.Get("/monthly", h.Calendar.GetMonthlyCalendar)
+	calendar.Get("/daily", h.Calendar.GetDayDetail)
+	calendar.Get("/upcoming", h.Calendar.GetUpcomingPayments)
 
 	// Category routes.
 	categories := protected.Group("/categories")
@@ -70,4 +80,16 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	shareGroups.Post("/", h.ShareGroup.Create)
 	shareGroups.Put("/:id", h.ShareGroup.Update)
 	shareGroups.Delete("/:id", h.ShareGroup.Delete)
+
+	// Report routes.
+	reports := protected.Group("/reports")
+	reports.Get("/overview", h.Report.GetOverview)
+
+	// Subscription share routes.
+	subs.Post("/:id/share", h.SubscriptionShare.Link)
+	subs.Get("/:id/share", h.SubscriptionShare.GetBySubscription)
+
+	subscriptionShares := protected.Group("/subscription-shares")
+	subscriptionShares.Put("/:id", h.SubscriptionShare.Update)
+	subscriptionShares.Delete("/:id", h.SubscriptionShare.Unlink)
 }

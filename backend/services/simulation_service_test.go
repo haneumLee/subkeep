@@ -4,11 +4,50 @@ import (
 	"math"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/subkeep/backend/models"
+	"github.com/subkeep/backend/repositories"
 )
+
+// ---------------------------------------------------------------------------
+// Mock SubscriptionShareRepository for simulation tests
+// ---------------------------------------------------------------------------
+
+type mockShareRepoForSimulation struct {
+	shares map[string]*models.SubscriptionShare
+}
+
+func newMockShareRepoForSim() *mockShareRepoForSimulation {
+	return &mockShareRepoForSimulation{
+		shares: make(map[string]*models.SubscriptionShare),
+	}
+}
+
+func (m *mockShareRepoForSimulation) FindByID(id string) (*models.SubscriptionShare, error) {
+	return nil, nil
+}
+func (m *mockShareRepoForSimulation) FindBySubscriptionID(subscriptionID string) (*models.SubscriptionShare, error) {
+	return nil, nil
+}
+func (m *mockShareRepoForSimulation) FindByUserID(userID string) ([]*models.SubscriptionShare, error) {
+	var result []*models.SubscriptionShare
+	for _, s := range m.shares {
+		result = append(result, s)
+	}
+	return result, nil
+}
+func (m *mockShareRepoForSimulation) Create(share *models.SubscriptionShare) error  { return nil }
+func (m *mockShareRepoForSimulation) Update(share *models.SubscriptionShare) error  { return nil }
+func (m *mockShareRepoForSimulation) Delete(id string) error                        { return nil }
+func (m *mockShareRepoForSimulation) DeleteBySubscriptionID(subscriptionID string) error {
+	return nil
+}
+
+// suppress unused import warnings
+var _ repositories.SubscriptionShareRepository = (*mockShareRepoForSimulation)(nil)
 
 // ===========================================================================
 // SimulateCancel
@@ -19,7 +58,8 @@ func TestSimulateCancel(t *testing.T) {
 
 	t.Run("correctly calculates savings after cancelling subscriptions", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		sub1 := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -37,7 +77,8 @@ func TestSimulateCancel(t *testing.T) {
 
 	t.Run("returns error for empty subscription IDs", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		_, err := svc.SimulateCancel(userID.String(), &CancelSimulationRequest{
 			SubscriptionIDs: []string{},
@@ -48,7 +89,8 @@ func TestSimulateCancel(t *testing.T) {
 
 	t.Run("returns error for non-existent subscription ID", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 
@@ -61,7 +103,8 @@ func TestSimulateCancel(t *testing.T) {
 
 	t.Run("returns correct category breakdown after cancellation", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		entertainment := makeCategory("Entertainment", "#FF5722")
 		music := makeCategory("Music", "#2196F3")
@@ -87,7 +130,8 @@ func TestSimulateCancel(t *testing.T) {
 
 	t.Run("handles cancelling all subscriptions (total becomes 0)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		sub1 := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		sub2 := repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -104,7 +148,8 @@ func TestSimulateCancel(t *testing.T) {
 
 	t.Run("handles mixed billing cycles in calculation", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		// monthly 10000 → 10000
 		// yearly 120000 → 10000
@@ -135,7 +180,8 @@ func TestSimulateAdd(t *testing.T) {
 
 	t.Run("correctly calculates cost increase after adding subscription", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 
@@ -155,7 +201,8 @@ func TestSimulateAdd(t *testing.T) {
 
 	t.Run("returns error for invalid request (missing fields)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		// Missing ServiceName.
 		_, err := svc.SimulateAdd(userID.String(), &AddSimulationRequest{
@@ -176,7 +223,8 @@ func TestSimulateAdd(t *testing.T) {
 
 	t.Run("handles adding weekly subscription (correct monthly conversion)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Existing", 10000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 
@@ -194,7 +242,8 @@ func TestSimulateAdd(t *testing.T) {
 
 	t.Run("handles adding yearly subscription (correct monthly conversion)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		repo.seedSubscriptionWithDetails(userID, "Existing", 10000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 
@@ -212,7 +261,8 @@ func TestSimulateAdd(t *testing.T) {
 
 	t.Run("correctly includes new item in category breakdown", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		entertainment := makeCategory("Entertainment", "#FF5722")
 		repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, entertainment)
@@ -230,7 +280,8 @@ func TestSimulateAdd(t *testing.T) {
 
 	t.Run("adding to existing category groups correctly", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		catID := uuid.New()
 		cat := &models.Category{ID: catID, Name: "Music", Color: strPtr("#2196F3")}
@@ -263,7 +314,8 @@ func TestApplySimulation(t *testing.T) {
 
 	t.Run("successfully soft-deletes specified subscriptions", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		sub1 := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
 		sub2 := repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -285,7 +337,8 @@ func TestApplySimulation(t *testing.T) {
 
 	t.Run("returns error for non-existent subscription", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		err := svc.ApplySimulation(userID.String(), &ApplySimulationRequest{
 			Action:          "cancel",
@@ -297,7 +350,8 @@ func TestApplySimulation(t *testing.T) {
 
 	t.Run("returns error when subscription belongs to different user (403)", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		otherUserID := uuid.New()
 		sub := repo.seedSubscriptionWithDetails(otherUserID, "OtherUserSub", 10000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
@@ -312,7 +366,8 @@ func TestApplySimulation(t *testing.T) {
 
 	t.Run("returns error for invalid request", func(t *testing.T) {
 		repo := newMockRepo()
-		svc := NewSimulationService(repo)
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
 
 		// Empty SubscriptionIDs.
 		err := svc.ApplySimulation(userID.String(), &ApplySimulationRequest{
@@ -328,5 +383,106 @@ func TestApplySimulation(t *testing.T) {
 		})
 		assertError(t, err)
 		assertAppErrorCode(t, err, http.StatusUnprocessableEntity)
+	})
+}
+
+// ===========================================================================
+// UndoSimulation
+// ===========================================================================
+
+func TestUndoSimulation(t *testing.T) {
+	userID := uuid.New()
+
+	t.Run("successfully undoes applied simulation within 30 seconds", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
+
+		sub1 := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+		sub2 := repo.seedSubscriptionWithDetails(userID, "Spotify", 10900, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		// Apply simulation (soft-delete sub1).
+		err := svc.ApplySimulation(userID.String(), &ApplySimulationRequest{
+			Action:          "cancel",
+			SubscriptionIDs: []string{sub1.ID.String()},
+		})
+		assertNil(t, err)
+
+		// sub1 should be deleted.
+		_, found := repo.subs[sub1.ID.String()]
+		assertEqual(t, found, false)
+
+		// Undo the simulation.
+		err = svc.UndoSimulation(userID.String())
+		assertNil(t, err)
+
+		// sub1 should be restored.
+		_, found = repo.subs[sub1.ID.String()]
+		assertEqual(t, found, true)
+
+		// sub2 should still exist.
+		_, found = repo.subs[sub2.ID.String()]
+		assertEqual(t, found, true)
+	})
+
+	t.Run("returns error when undo period has expired", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
+
+		sub1 := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		// Apply simulation.
+		err := svc.ApplySimulation(userID.String(), &ApplySimulationRequest{
+			Action:          "cancel",
+			SubscriptionIDs: []string{sub1.ID.String()},
+		})
+		assertNil(t, err)
+
+		// Manually expire the undo entry.
+		svc.undoMu.Lock()
+		if entry, ok := svc.undoStore[userID.String()]; ok {
+			entry.expiresAt = time.Now().Add(-1 * time.Second)
+		}
+		svc.undoMu.Unlock()
+
+		// Undo should fail with bad request.
+		err = svc.UndoSimulation(userID.String())
+		assertError(t, err)
+		assertAppErrorCode(t, err, http.StatusBadRequest)
+	})
+
+	t.Run("returns error when no undo action exists", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
+
+		err := svc.UndoSimulation(userID.String())
+		assertError(t, err)
+		assertAppErrorCode(t, err, http.StatusNotFound)
+	})
+
+	t.Run("returns error when trying to undo twice", func(t *testing.T) {
+		repo := newMockRepo()
+		shareRepo := newMockShareRepoForSim()
+		svc := NewSimulationService(repo, shareRepo)
+
+		sub1 := repo.seedSubscriptionWithDetails(userID, "Netflix", 17000, models.BillingCycleMonthly, models.SubscriptionStatusActive, nil, nil)
+
+		// Apply simulation.
+		err := svc.ApplySimulation(userID.String(), &ApplySimulationRequest{
+			Action:          "cancel",
+			SubscriptionIDs: []string{sub1.ID.String()},
+		})
+		assertNil(t, err)
+
+		// First undo should succeed.
+		err = svc.UndoSimulation(userID.String())
+		assertNil(t, err)
+
+		// Second undo should fail (entry already consumed).
+		err = svc.UndoSimulation(userID.String())
+		assertError(t, err)
+		assertAppErrorCode(t, err, http.StatusNotFound)
 	})
 }

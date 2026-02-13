@@ -16,6 +16,11 @@ import (
 
 	"github.com/subkeep/backend/config"
 	"github.com/subkeep/backend/database"
+	"github.com/subkeep/backend/handlers"
+	"github.com/subkeep/backend/models"
+	"github.com/subkeep/backend/repositories"
+	"github.com/subkeep/backend/routes"
+	"github.com/subkeep/backend/services"
 	"github.com/subkeep/backend/utils"
 )
 
@@ -70,6 +75,47 @@ func main() {
 		MaxAge:           86400,
 	}))
 
+	// Auto-migrate database tables.
+	db := database.DB
+	if err := models.AutoMigrateAll(db); err != nil {
+		slog.Error("failed to auto-migrate database", "error", err)
+		os.Exit(1)
+	}
+	if err := models.SeedDefaultCategories(db); err != nil {
+		slog.Error("failed to seed default categories", "error", err)
+		os.Exit(1)
+	}
+
+	// Initialize repositories.
+	userRepo := repositories.NewUserRepository(db)
+	subRepo := repositories.NewSubscriptionRepository(db)
+	catRepo := repositories.NewCategoryRepository(db)
+	shareGroupRepo := repositories.NewShareGroupRepository(db)
+	subShareRepo := repositories.NewSubscriptionShareRepository(db)
+
+	// Initialize services.
+	authService := services.NewAuthService(userRepo, cfg.JWT)
+	oauthService := services.NewOAuthService(cfg.OAuth)
+	subService := services.NewSubscriptionService(subRepo)
+	dashboardService := services.NewDashboardService(subRepo, subShareRepo)
+	simService := services.NewSimulationService(subRepo, subShareRepo)
+	calendarService := services.NewCalendarService(subRepo, subShareRepo)
+	catService := services.NewCategoryService(catRepo)
+	shareGroupService := services.NewShareGroupService(shareGroupRepo)
+	subShareService := services.NewSubscriptionShareService(subShareRepo, subRepo, shareGroupRepo)
+	reportService := services.NewReportService(subRepo, subShareRepo)
+
+	// Initialize handlers.
+	authHandler := handlers.NewAuthHandler(authService, oauthService)
+	subHandler := handlers.NewSubscriptionHandler(subService)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
+	simHandler := handlers.NewSimulationHandler(simService)
+	calendarHandler := handlers.NewCalendarHandler(calendarService)
+	catHandler := handlers.NewCategoryHandler(catService)
+	shareGroupHandler := handlers.NewShareGroupHandler(shareGroupService)
+	subShareHandler := handlers.NewSubscriptionShareHandler(subShareService)
+	reportHandler := handlers.NewReportHandler(reportService)
+
 	// Health check endpoint.
 	app.Get("/health", func(c *fiber.Ctx) error {
 		dbStatus := "up"
@@ -87,11 +133,19 @@ func main() {
 		})
 	})
 
-	// API v1 route group.
-	_ = app.Group("/api/v1")
-
-	// TODO: Register route handlers
-	// routes.Setup(v1, cfg)
+	// Register route handlers.
+	routes.SetupRoutes(app, &routes.Handlers{
+		Auth:              authHandler,
+		Subscription:      subHandler,
+		Dashboard:         dashboardHandler,
+		Simulation:        simHandler,
+		Calendar:          calendarHandler,
+		Category:          catHandler,
+		ShareGroup:        shareGroupHandler,
+		SubscriptionShare: subShareHandler,
+		Report:            reportHandler,
+		AuthService:       authService,
+	})
 
 	// Graceful shutdown.
 	quit := make(chan os.Signal, 1)

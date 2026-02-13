@@ -90,7 +90,11 @@ func (m *mockSubscriptionRepo) FindByID(id string) (*models.Subscription, error)
 
 func (m *mockSubscriptionRepo) FindByUserID(userID string, filter repositories.SubscriptionFilter) ([]*models.Subscription, int64, error) {
 	var result []*models.Subscription
-	for _, sub := range m.subs {
+	for key, sub := range m.subs {
+		// Skip soft-deleted entries.
+		if len(key) > 8 && key[:8] == "deleted:" {
+			continue
+		}
 		if sub.UserID.String() != userID {
 			continue
 		}
@@ -128,13 +132,33 @@ func (m *mockSubscriptionRepo) Delete(id string) error {
 	if m.deleteErr != nil {
 		return m.deleteErr
 	}
-	delete(m.subs, id)
+	if sub, ok := m.subs[id]; ok {
+		now := time.Now()
+		sub.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+		delete(m.subs, id)
+		m.subs["deleted:"+id] = sub
+	}
+	return nil
+}
+
+func (m *mockSubscriptionRepo) Restore(id string) error {
+	key := "deleted:" + id
+	sub, ok := m.subs[key]
+	if !ok {
+		return fmt.Errorf("subscription not found for restore: %s", id)
+	}
+	sub.DeletedAt = gorm.DeletedAt{Valid: false}
+	delete(m.subs, key)
+	m.subs[id] = sub
 	return nil
 }
 
 func (m *mockSubscriptionRepo) CountByUserID(userID string) (int64, error) {
 	var count int64
-	for _, sub := range m.subs {
+	for key, sub := range m.subs {
+		if len(key) > 8 && key[:8] == "deleted:" {
+			continue
+		}
 		if sub.UserID.String() == userID {
 			count++
 		}

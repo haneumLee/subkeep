@@ -164,6 +164,64 @@ frontend/nginx.conf
 
 ---
 
+#### `dc61fed` - feat(backend): main.go 의존성 주입, 구독 공유 분담 API, 시뮬레이션 Undo, 대시보드 개인 부담액 반영
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/backend-integration  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ main.go: Repository → Service → Handler 의존성 주입 및 routes.SetupRoutes() 연결
+- ✅ main.go: DB AutoMigrate 및 기본 카테고리 시딩 추가
+- ✅ SubscriptionShareRepository/Service/Handler: 구독-공유그룹 연결/수정/해제/조회 API (4개 엔드포인트)
+- ✅ SimulationService: Undo 기능 추가 (인메모리 30초 TTL, POST /simulation/undo)
+- ✅ SubscriptionRepository: Restore 메서드 추가 (soft delete 복원)
+- ✅ DashboardService: 공유 분담(equal/custom_amount/custom_ratio) 개인 부담액 기준 합산
+- ✅ SimulationService: 시뮬레이션 계산에 공유 분담 개인 부담액 반영
+- ✅ 단위 테스트 218개 전체 통과 (SubscriptionShare 13개, Undo 4개, Dashboard 공유 4개 추가)
+- 📎 Refs: F-03, F-05, F-10, E1-1~E1-7
+
+**Stats:**
+- 13 files changed
+- 1,578 insertions(+), 61 deletions(-)
+
+---
+
+#### `e985dcd` - feat: F-09 리포트/차트 API 구현 (GET /api/v1/reports/overview)
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/backend-integration  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ ReportService 구현 (카테고리별 분류, 월별 추이, 평균 비용, 요약 통계)
+- ✅ ReportHandler 구현 (GET /api/v1/reports/overview)
+- ✅ 공유 분담 개인 부담액 기반 리포트 계산
+- 📎 Refs: F-09
+
+**Stats:**
+- 6 files changed
+- 618 insertions(+)
+
+---
+
+#### `fcbe252` - feat(backend): F-08 결제일 캘린더 API 보강 및 F-09 리포트/차트 단위 테스트 추가
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/backend-integration  
+**Type**: Feature Implementation + Testing
+
+**주요 변경사항:**
+- ✅ CalendarService: GetDayDetail(일별 결제 상세), GetUpcomingPayments(향후 N일 결제 예정) 메서드 추가
+- ✅ CalendarHandler: GET /api/v1/calendar/daily, GET /api/v1/calendar/upcoming 핸들러 추가
+- ✅ routes.go: calendar 라우트 3개 등록 (monthly, daily, upcoming)
+- ✅ CalendarService 단위 테스트 22개 작성 (전체 통과)
+- ✅ ReportService 단위 테스트 17개 작성 (전체 통과)
+- 📎 Refs: F-08, F-09, E1-1~E1-7
+
+**Stats:**
+- 5 files changed
+- 1,621 insertions(+)
+
+---
+
 ## Commit Convention
 
 이 프로젝트는 [Conventional Commits](https://www.conventionalcommits.org/) 규칙을 따릅니다.
@@ -223,14 +281,17 @@ docs: README 설치 가이드 업데이트
 ## Statistics
 
 ### 전체 통계
-- Total Commits: 6 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc)
+- Total Commits: 9 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc, dc61fed, e985dcd, fcbe252)
 - Contributors: 1
-- Branches: 4 (main, dev, feature/backend-init-auth, feature/dashboard-simulation)
+- Branches: 5 (main, dev, feature/backend-init-auth, feature/dashboard-simulation, feature/backend-integration)
 - Tags: 0
 
 ### 브랜치별 커밋 수
 - main: 1
 - dev: 1
+- feature/backend-init-auth: 2
+- feature/dashboard-simulation: 2
+- feature/backend-integration: 3
 
 ---
 

@@ -41,6 +41,7 @@ type SubscriptionRepository interface {
 	Create(sub *models.Subscription) error
 	Update(sub *models.Subscription) error
 	Delete(id string) error // soft delete
+	Restore(id string) error // 소프트 삭제 복원 (deleted_at = NULL)
 	CountByUserID(userID string) (int64, error)
 	FindDuplicateName(userID, serviceName string) (bool, error)
 }
@@ -137,6 +138,17 @@ func (r *subscriptionRepository) Update(sub *models.Subscription) error {
 func (r *subscriptionRepository) Delete(id string) error {
 	if err := r.db.Where("id = ?", id).Delete(&models.Subscription{}).Error; err != nil {
 		return fmt.Errorf("delete subscription: %w", err)
+	}
+	return nil
+}
+
+// Restore reverses a soft delete by setting deleted_at back to NULL.
+func (r *subscriptionRepository) Restore(id string) error {
+	if err := r.db.Model(&models.Subscription{}).
+		Unscoped().
+		Where("id = ?", id).
+		Update("deleted_at", nil).Error; err != nil {
+		return fmt.Errorf("restore subscription: %w", err)
 	}
 	return nil
 }

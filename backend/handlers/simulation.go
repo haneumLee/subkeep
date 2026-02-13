@@ -89,3 +89,20 @@ func (h *SimulationHandler) ApplySimulation(c *fiber.Ctx) error {
 
 	return utils.SuccessWithMessage(c, "시뮬레이션이 적용되었습니다", nil)
 }
+
+// UndoSimulation handles POST /api/v1/simulation/undo.
+func (h *SimulationHandler) UndoSimulation(c *fiber.Ctx) error {
+	userID, err := getUserID(c)
+	if err != nil {
+		return utils.Error(c, err.(*utils.AppError))
+	}
+
+	if svcErr := h.service.UndoSimulation(userID); svcErr != nil {
+		if appErr, ok := svcErr.(*utils.AppError); ok {
+			return utils.Error(c, appErr)
+		}
+		return utils.Error(c, utils.ErrInternal("실행 취소에 실패했습니다"))
+	}
+
+	return utils.SuccessWithMessage(c, "시뮬레이션이 실행 취소되었습니다", nil)
+}
