@@ -12,6 +12,8 @@ import (
 type Handlers struct {
 	Auth         *handlers.AuthHandler
 	Subscription *handlers.SubscriptionHandler
+	Dashboard    *handlers.DashboardHandler
+	Simulation   *handlers.SimulationHandler
 	AuthService  *services.AuthService
 }
 
@@ -40,4 +42,15 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	subs.Put("/:id", h.Subscription.Update)
 	subs.Delete("/:id", h.Subscription.Delete)
 	subs.Patch("/:id/satisfaction", h.Subscription.UpdateSatisfaction)
+
+	// Dashboard routes.
+	dashboard := protected.Group("/dashboard")
+	dashboard.Get("/summary", h.Dashboard.GetSummary)
+	dashboard.Get("/recommendations", h.Dashboard.GetRecommendations)
+
+	// Simulation routes.
+	simulation := protected.Group("/simulation")
+	simulation.Post("/cancel", h.Simulation.SimulateCancel)
+	simulation.Post("/add", h.Simulation.SimulateAdd)
+	simulation.Post("/apply", h.Simulation.ApplySimulation)
 }
