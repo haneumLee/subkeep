@@ -99,18 +99,22 @@ func main() {
 	subService := services.NewSubscriptionService(subRepo)
 	dashboardService := services.NewDashboardService(subRepo, subShareRepo)
 	simService := services.NewSimulationService(subRepo, subShareRepo)
+	calendarService := services.NewCalendarService(subRepo, subShareRepo)
 	catService := services.NewCategoryService(catRepo)
 	shareGroupService := services.NewShareGroupService(shareGroupRepo)
 	subShareService := services.NewSubscriptionShareService(subShareRepo, subRepo, shareGroupRepo)
+	reportService := services.NewReportService(subRepo, subShareRepo)
 
 	// Initialize handlers.
 	authHandler := handlers.NewAuthHandler(authService, oauthService)
 	subHandler := handlers.NewSubscriptionHandler(subService)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 	simHandler := handlers.NewSimulationHandler(simService)
+	calendarHandler := handlers.NewCalendarHandler(calendarService)
 	catHandler := handlers.NewCategoryHandler(catService)
 	shareGroupHandler := handlers.NewShareGroupHandler(shareGroupService)
 	subShareHandler := handlers.NewSubscriptionShareHandler(subShareService)
+	reportHandler := handlers.NewReportHandler(reportService)
 
 	// Health check endpoint.
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -135,9 +139,11 @@ func main() {
 		Subscription:      subHandler,
 		Dashboard:         dashboardHandler,
 		Simulation:        simHandler,
+		Calendar:          calendarHandler,
 		Category:          catHandler,
 		ShareGroup:        shareGroupHandler,
 		SubscriptionShare: subShareHandler,
+		Report:            reportHandler,
 		AuthService:       authService,
 	})
 
