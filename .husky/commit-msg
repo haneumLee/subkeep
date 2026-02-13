@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Conventional Commits validation
+# Format: <type>(<scope>): <subject>
+# Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Skip merge commits
+if echo "$COMMIT_MSG" | grep -qE "^Merge"; then
+  exit 0
+fi
+
+# Conventional commit pattern
+PATTERN="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-zA-Z0-9_-]+\))?: .{1,100}"
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+  echo "❌ Invalid commit message format!"
+  echo ""
+  echo "Commit message must follow Conventional Commits:"
+  echo "  <type>(<scope>): <subject>"
+  echo ""
+  echo "Types:"
+  echo "  feat:     A new feature"
+  echo "  fix:      A bug fix"
+  echo "  docs:     Documentation changes"
+  echo "  style:    Code style changes (formatting, etc.)"
+  echo "  refactor: Code refactoring"
+  echo "  test:     Adding or updating tests"
+  echo "  chore:    Maintenance tasks"
+  echo "  perf:     Performance improvements"
+  echo "  ci:       CI/CD changes"
+  echo "  build:    Build system changes"
+  echo "  revert:   Revert previous commit"
+  echo ""
+  echo "Examples:"
+  echo "  feat(auth): add JWT token validation"
+  echo "  fix(api): resolve subscription calculation bug"
+  echo "  docs: update README installation steps"
+  echo ""
+  echo "Your commit message:"
+  echo "  $COMMIT_MSG"
+  exit 1
+fi
+
+echo "✅ Commit message is valid"

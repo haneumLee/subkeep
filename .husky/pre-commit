@@ -1,0 +1,66 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# ============ Backend (Go) Checks ============
+if git diff --cached --name-only | grep -q "^backend/.*\.go$"; then
+  echo "📝 Checking Go files..."
+  
+  cd backend || exit 1
+  
+  # Format check
+  echo "  - Running gofmt..."
+  UNFORMATTED=$(gofmt -l . | grep -v vendor || true)
+  if [ -n "$UNFORMATTED" ]; then
+    echo "❌ The following Go files are not formatted:"
+    echo "$UNFORMATTED"
+    echo "Run: cd backend && gofmt -w ."
+    exit 1
+  fi
+  
+  # Linting
+  if command -v golangci-lint &> /dev/null; then
+    echo "  - Running golangci-lint..."
+    golangci-lint run --timeout=5m || exit 1
+  else
+    echo "⚠️  golangci-lint not found, skipping..."
+  fi
+  
+  # Unit tests
+  echo "  - Running Go tests..."
+  go test -short ./... || exit 1
+  
+  cd ..
+fi
+
+# ============ Frontend (Next.js) Checks ============
+if git diff --cached --name-only | grep -q "^frontend/"; then
+  echo "📝 Checking Frontend files..."
+  
+  cd frontend || exit 1
+  
+  # Linting
+  echo "  - Running ESLint..."
+  npm run lint || exit 1
+  
+  # Type checking
+  echo "  - Running TypeScript check..."
+  npm run type-check || exit 1
+  
+  # Prettier format check
+  if command -v prettier &> /dev/null; then
+    echo "  - Checking Prettier formatting..."
+    npx prettier --check "**/*.{ts,tsx,js,jsx,json,css,md}" || {
+      echo "❌ Files need formatting. Run: cd frontend && npm run format"
+      exit 1
+    }
+  fi
+  
+  cd ..
+fi
+
+# ============ Commit Message Check ============
+# This will be handled by commit-msg hook
+
+echo "✅ All pre-commit checks passed!"

@@ -1,0 +1,376 @@
+# ====================================
+# SubKeep Project .gitignore
+# ====================================
+
+# ============ Environment Variables ============
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!.env.example
+
+# Docker environment (contains validator private keys)
+docker/.env
+
+# ============ Secrets & Keys ============
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.yml
+private_key.txt
+keystore/
+
+# SSL Certificates
+*.crt
+*.cer
+*.der
+!**/*-ca.crt  # Allow CA certificates in docs/examples
+
+# OAuth & Service Account Credentials
+**/credentials/*.json
+service-account*.json
+oauth-credentials.*
+client_secret*.json
+
+# SSH Keys (project-specific)
+id_rsa
+id_rsa.pub
+*.ppk
+
+# ============ Go Backend ============
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Coverage
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+coverage.html
+
+# Dependencies
+backend/vendor/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Build
+backend/bin/
+backend/build/
+backend/dist/
+
+# ============ Frontend (React/Next.js) ============
+# Dependencies
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+
+# Production
+frontend/build/
+frontend/dist/
+
+# Testing
+frontend/coverage/
+frontend/.nyc_output/
+
+# Misc
+frontend/.DS_Store
+frontend/*.log
+
+# TypeScript
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# Vercel
+frontend/.vercel
+
+# Turbo
+frontend/.turbo
+
+# ============ Docker ============
+# Docker volumes
+docker/data/
+docker/volumes/
+docker/besu/data/
+docker/postgres/data/
+docker/redis/data/
+
+# Docker logs
+docker/**/*.log
+
+# ============ Database ============
+*.sqlite
+*.sqlite3
+*.db
+*.sql.gz
+dump.sql
+
+# PostgreSQL
+postgres-data/
+pgdata/
+
+# Redis
+redis-data/
+dump.rdb
+
+# Database migrations with sensitive data
+**/migrations/*_seed_*.sql
+**/seeds/production/
+
+# ============ User Data & Privacy ============
+# User uploaded files (may contain personal data)
+uploads/
+public/uploads/
+storage/
+user-data/
+user_uploads/
+
+# Exported user data
+exports/
+backups/user_data/
+*.csv
+*.xlsx
+!docs/**/*.csv  # Allow documentation examples
+
+# Session files
+sessions/
+*.session
+
+# ============ Application Secrets ============
+# Config files that might contain secrets
+config.local.yml
+config.production.yml
+app.local.json
+
+# JWT secrets, API keys (if accidentally hardcoded)
+**/config/*secret*.json
+**/config/*key*.json
+
+# Stripe, payment provider keys
+stripe_config.json
+payment_secrets.yml
+
+# ============ Logs ============
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Application logs (may contain user data)
+app.log
+error.log
+access.log
+audit.log
+*.log.*
+
+# ============ Analytics & Monitoring ============
+# Analytics data exports
+analytics-data/
+metrics/
+*.analytics.json
+
+# Error tracking exports (may contain user data)
+sentry-export/
+error-reports/
+
+# ============ OS Files ============
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============ IDE & Editors ============
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.vscode-server/
+
+# Claude AI
+.claude/
+
+# Codex
+.codex/
+
+# JetBrains
+.idea/
+*.swp
+*.swo
+*~.nib
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+
+# ============ Testing ============
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# ============ Temporary Files ============
+*.tmp
+*.temp
+*.swp
+*.bak
+*.backup
+*~
+
+# Local development overrides
+*.local.*
+local.config.*
+dev.override.*
+
+# Cache directories
+.cache/
+.npm/
+.config/
+
+# System/Runtime
+.dotnet/
+.foundry/
+
+# SSH (should never be in project)
+.ssh/
+
+# ============ Email & Notifications ============
+# Email templates with real customer data
+emails/sent/
+emails/archive/
+**/email-logs/
+
+# Test emails
+test-emails/
+
+# ============ Build Artifacts ============
+dist/
+build/
+*.tar.gz
+*.zip
+*.rar
+
+# ============ Infrastructure ============
+# Terraform
+infrastructure/**/.terraform/
+infrastructure/**/.terraform.lock.hcl
+infrastructure/**/terraform.tfstate
+infrastructure/**/terraform.tfstate.backup
+infrastructure/**/*.tfvars
+!infrastructure/**/terraform.tfvars.example
+infrastructure/**/.terragrunt-cache/
+infrastructure/**/override.tf
+infrastructure/**/override.tf.json
+
+# Kubernetes secrets
+infrastructure/k8s/secrets/
+infrastructure/k8s/**/*-secret.yaml
+!infrastructure/k8s/**/*-secret.example.yaml
+
+# AWS
+.aws/
+
+# ============ Documentation ============
+# Exclude all docs by default (contains business strategy & specifications)
+docs/*
+
+# Only allow specific operational docs
+!docs/06_Commit History.md
+!docs/07_Trouble Shootings.md
+!docs/GIT_WORKFLOW.md
+
+# Exclude generated documentation
+docs/api/
+docs/coverage/
+
+# ============ CI/CD ============
+.github/workflows/secrets/
+
+# GitHub Copilot (개인 설정/캐시만 제외)
+.github/.copilot/
+.github/agents/          # 개인 에이전트 설정
+.github/prompts/         # 개인 프롬프트
+
+# 중요: .github/copilot-instructions.md는 프로젝트 지침이므로 커밋해야 함!
+
+# ============ Monitoring ============
+prometheus-data/
+grafana-data/
+
+# ============ Node Modules (Global) ============
+node_modules/
+jspm_packages/
+
+# ============ Package Manager Lock Files ============
+# Keep lock files for reproducible builds
+# Uncomment if you want to ignore them:
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ============ MacOS ============
+.AppleDouble
+.LSOverride
+Icon
+
+# ============ Windows ============
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk

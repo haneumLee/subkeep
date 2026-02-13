@@ -1,0 +1,137 @@
+# ====================================
+# SubKeep Docker Compose Configuration
+# ====================================
+# Usage:
+#   Development: docker compose up -d
+#   Production:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   Stop:        docker compose down
+#   Logs:        docker compose logs -f [service]
+
+version: '3.8'
+
+services:
+  # ==================== PostgreSQL Database ====================
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-15-alpine}
+    container_name: subkeep-postgres
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-subkeep_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-subkeep_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-subkeep_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: ${TZ:-Asia/Seoul}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    networks:
+      - subkeep-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-subkeep_user} -d ${POSTGRES_DB:-subkeep_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ==================== Redis Cache ====================
+  redis:
+    image: redis:${REDIS_VERSION:-7-alpine}
+    container_name: subkeep-redis
+    restart: ${RESTART_POLICY:-unless-stopped}
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - subkeep-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ==================== Backend API ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: subkeep-backend
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      ENV: ${ENV:-development}
+      SERVER_PORT: ${BACKEND_PORT:-8080}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-subkeep_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-subkeep_dev_password}
+      DB_NAME: ${POSTGRES_DB:-subkeep_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TZ: ${TZ:-Asia/Seoul}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - subkeep-network
+    volumes:
+      - ./backend/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==================== Frontend ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    container_name: subkeep-frontend
+    restart: ${RESTART_POLICY:-unless-stopped}
+    environment:
+      TZ: ${TZ:-Asia/Seoul}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    networks:
+      - subkeep-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+# ==================== Networks ====================
+networks:
+  subkeep-network:
+    driver: bridge
+    name: ${NETWORK_NAME:-subkeep-network}
+
+# ==================== Volumes ====================
+volumes:
+  postgres_data:
+    driver: local
+    name: subkeep-postgres-data
+  redis_data:
+    driver: local
+    name: subkeep-redis-data

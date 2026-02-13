@@ -1,0 +1,137 @@
+# ====================================
+# GolangCI-Lint Configuration for SubKeep Backend
+# ====================================
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - bin
+    - scripts
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*_generated\\.go$"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters:
+  enable:
+    - errcheck        # Check for unchecked errors
+    - gosimple        # Simplify code
+    - govet           # Go vet
+    - ineffassign     # Detect ineffectual assignments
+    - staticcheck     # Advanced static analysis
+    - unused          # Check for unused code
+    - gofmt           # Check formatting
+    - goimports       # Check imports
+    - misspell        # Check for misspelled English words
+    - gocritic        # Opinionated linter
+    - revive          # Fast, configurable, extensible, flexible, and beautiful linter
+    - stylecheck      # Replacement for golint
+    - gosec           # Security checker
+    - unconvert       # Remove unnecessary type conversions
+    - unparam         # Reports unused function parameters
+    - prealloc        # Find slice declarations that could potentially be preallocated
+    - exportloopref   # Check for pointers to enclosing loop variables
+    - goconst         # Find repeated strings that could be constants
+    - gocyclo         # Cyclomatic complexity
+    - dupl            # Code clone detection
+    - errorlint       # Error wrapping
+    - nestif          # Deep nesting detection
+
+  disable:
+    - deadcode        # Deprecated
+    - varcheck        # Deprecated
+    - structcheck     # Deprecated
+    - ifshort         # Deprecated
+    - golint          # Deprecated (use revive)
+    - maligned        # Deprecated
+    - interfacer      # Deprecated
+    - scopelint       # Deprecated
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  
+  govet:
+    check-shadowing: true
+    enable-all: true
+  
+  gocyclo:
+    min-complexity: 15
+  
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  
+  misspell:
+    locale: US
+  
+  nestif:
+    min-complexity: 4
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+      - name: package-comments
+        severity: warning
+      - name: var-naming
+        severity: warning
+      - name: indent-error-flow
+        severity: warning
+      - name: error-return
+        severity: warning
+      - name: error-strings
+        severity: warning
+      - name: receiver-naming
+        severity: warning
+      - name: increment-decrement
+        severity: warning
+  
+  gosec:
+    excludes:
+      - G104  # Audit errors not checked (covered by errcheck)
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - goconst
+    
+    # Exclude known false positives
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+    
+    # Exclude some staticcheck messages
+    - linters:
+        - staticcheck
+      text: "ST1000:"
+  
+  max-issues-per-linter: 50
+  max-same-issues: 3
+  new: false
+  fix: false
