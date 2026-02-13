@@ -14,6 +14,8 @@ type Handlers struct {
 	Subscription *handlers.SubscriptionHandler
 	Dashboard    *handlers.DashboardHandler
 	Simulation   *handlers.SimulationHandler
+	Category     *handlers.CategoryHandler
+	ShareGroup   *handlers.ShareGroupHandler
 	AuthService  *services.AuthService
 }
 
@@ -53,4 +55,19 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	simulation.Post("/cancel", h.Simulation.SimulateCancel)
 	simulation.Post("/add", h.Simulation.SimulateAdd)
 	simulation.Post("/apply", h.Simulation.ApplySimulation)
+
+	// Category routes.
+	categories := protected.Group("/categories")
+	categories.Get("/", h.Category.GetAll)
+	categories.Post("/", h.Category.Create)
+	categories.Put("/:id", h.Category.Update)
+	categories.Delete("/:id", h.Category.Delete)
+
+	// Share group routes.
+	shareGroups := protected.Group("/share-groups")
+	shareGroups.Get("/", h.ShareGroup.GetAll)
+	shareGroups.Get("/:id", h.ShareGroup.GetByID)
+	shareGroups.Post("/", h.ShareGroup.Create)
+	shareGroups.Put("/:id", h.ShareGroup.Update)
+	shareGroups.Delete("/:id", h.ShareGroup.Delete)
 }
