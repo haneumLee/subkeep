@@ -22,12 +22,13 @@ export function CancelSimulation() {
   const [showUndoButton, setShowUndoButton] = useState(false);
 
   // 만족도 낮은 순으로 정렬
-  const sortedSubscriptions =
-    subscriptionsData?.data.sort((a: Subscription, b: Subscription) => {
+  const sortedSubscriptions = [...(subscriptionsData?.data || [])].sort(
+    (a: Subscription, b: Subscription) => {
       const scoreA = a.satisfactionScore ?? 6; // null은 맨 뒤로
       const scoreB = b.satisfactionScore ?? 6;
       return scoreA - scoreB;
-    }) || [];
+    }
+  );
 
   // 선택 변경 시 실시간 시뮬레이션
   useEffect(() => {

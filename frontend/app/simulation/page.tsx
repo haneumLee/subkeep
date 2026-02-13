@@ -42,12 +42,13 @@ export default function SimulationPage() {
   const [showUndoButton, setShowUndoButton] = useState(false);
 
   // Sorted subscriptions by satisfaction (low first)
-  const sortedSubscriptions =
-    subscriptionsData?.data.sort((a: Subscription, b: Subscription) => {
+  const sortedSubscriptions = [...(subscriptionsData?.data || [])].sort(
+    (a: Subscription, b: Subscription) => {
       const scoreA = a.satisfactionScore ?? 6;
       const scoreB = b.satisfactionScore ?? 6;
       return scoreA - scoreB;
-    }) || [];
+    }
+  );
 
   // Run combined simulation whenever cancel/add selections change
   const runSimulation = useCallback(async () => {
