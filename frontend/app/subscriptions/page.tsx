@@ -77,7 +77,7 @@ export default function SubscriptionsPage() {
       <FolderPanel
         selectedFolderId={folderFilter}
         onSelectFolder={(id) => {
-          setFolderFilter(id);
+          setFolderFilter(id ?? '');
           setCurrentPage(1);
         }}
       />

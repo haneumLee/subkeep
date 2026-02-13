@@ -113,6 +113,7 @@ export default function FolderManagerPopup({ isOpen, onClose }: FolderManagerPop
                         onChange={(e) => setEditingName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
                         className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                        // eslint-disable-next-line jsx-a11y/no-autofocus
                         autoFocus
                       />
                       <button
