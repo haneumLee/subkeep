@@ -204,8 +204,8 @@ frontend/nginx.conf
 ---
 
 #### `fcbe252` - feat(backend): F-08 결제일 캘린더 API 보강 및 F-09 리포트/차트 단위 테스트 추가
-**Author**: haneumLee <2haneum@naver.com>  
-**Branch**: feature/backend-integration  
+**Author**: haneumLee <2haneum@naver.com>
+**Branch**: feature/backend-integration
 **Type**: Feature Implementation + Testing
 
 **주요 변경사항:**
@@ -219,6 +219,50 @@ frontend/nginx.conf
 **Stats:**
 - 5 files changed
 - 1,621 insertions(+)
+
+---
+
+#### `51ebec1` - feat(frontend): 프론트엔드 초기 설정 및 전체 페이지/컴포넌트 구현
+**Author**: haneumLee <2haneum@naver.com>
+**Branch**: feature/frontend-init
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ Next.js 14 App Router 프로젝트 수동 구성 (package.json, tsconfig.json, tailwind.config.ts)
+- ✅ AppLayout: 반응형 사이드바 네비게이션, 모바일 햄버거 메뉴, 로그아웃 모달
+- ✅ AuthContext: JWT 기반 인증 상태 관리 (login/logout/refresh)
+- ✅ UI 컴포넌트: Button, Modal, Toast, LoadingSpinner
+- ✅ 대시보드, 구독 관리, 시뮬레이션, 공유 그룹 페이지 구현
+- ✅ React Query 기반 커스텀 훅 (useSubscriptions, useDashboard, useSimulation, useShareGroups 등)
+- ✅ 단위 테스트 52개 작성 (전체 통과)
+- 📎 Refs: F-01~F-05, F-10
+
+**Stats:**
+- 60 files changed
+- 6,839 insertions(+)
+
+---
+
+#### `8d71bc8` - feat(frontend): F-08 캘린더, F-09 리포트, F-11 설정 페이지 구현
+**Author**: haneumLee <2haneum@naver.com>
+**Branch**: feature/frontend-remaining-pages
+**Type**: Feature Implementation + Testing
+
+**주요 변경사항:**
+- ✅ F-08 결제일 캘린더: 월별 캘린더 그리드, 일별 상세 모달, 다가오는 결제 목록
+- ✅ F-09 리포트/차트: CSS-only 카테고리 도넛 차트, 월별 추이 바 차트, 비용 요약, 구독 요약
+- ✅ F-11 설정 페이지: 프로필 정보 표시, 카테고리 CRUD 관리(추가/수정/삭제)
+- ✅ AppLayout 네비게이션에 캘린더/리포트 메뉴 추가
+- ✅ img 태그 → Next.js Image 컴포넌트 변환
+- ✅ next.config.js에 OAuth 프로바이더 아바타 이미지 도메인 설정
+- ✅ types/index.ts에 Calendar/Report 타입 추가
+- ✅ useCalendar, useReports, useCategories(CRUD) 훅 추가
+- ✅ 전체 69개 단위 테스트 통과 (15 suites)
+- 📎 Refs: F-07, F-08, F-09, F-11
+
+**Stats:**
+- 33 files changed
+- 1,585 insertions(+), 5 deletions(-)
 
 ---
 
@@ -281,9 +325,9 @@ docs: README 설치 가이드 업데이트
 ## Statistics
 
 ### 전체 통계
-- Total Commits: 9 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc, dc61fed, e985dcd, fcbe252)
+- Total Commits: 11 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc, dc61fed, e985dcd, fcbe252, 51ebec1, 8d71bc8)
 - Contributors: 1
-- Branches: 5 (main, dev, feature/backend-init-auth, feature/dashboard-simulation, feature/backend-integration)
+- Branches: 7 (main, dev, feature/backend-init-auth, feature/dashboard-simulation, feature/backend-integration, feature/frontend-init, feature/frontend-remaining-pages)
 - Tags: 0
 
 ### 브랜치별 커밋 수
@@ -292,6 +336,8 @@ docs: README 설치 가이드 업데이트
 - feature/backend-init-auth: 2
 - feature/dashboard-simulation: 2
 - feature/backend-integration: 3
+- feature/frontend-init: 1
+- feature/frontend-remaining-pages: 1
 
 ---
 
