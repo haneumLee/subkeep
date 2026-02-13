@@ -143,6 +143,27 @@ frontend/nginx.conf
 
 ---
 
+#### `c70fbbc` - feat(backend): 카테고리 CRUD 및 공유 그룹 CRUD API 구현
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/dashboard-simulation  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ CategoryRepository/Service/Handler: 시스템+사용자 카테고리 조회, 커스텀 카테고리 생성/수정/삭제
+- ✅ 시스템 카테고리 수정/삭제 방지, 삭제 시 구독 항목 '기타'로 자동 재배치
+- ✅ ShareGroupRepository/Service/Handler: 공유 그룹 CRUD 및 멤버 관리
+- ✅ 그룹 생성 시 소유자 자동 추가(isOwner=true), 최소 2명 검증
+- ✅ 소유권 검증 로직 적용(조회/수정/삭제)
+- ✅ 그룹 삭제 시 SubscriptionShare 레코드 자동 제거
+- ✅ 카테고리 서비스 단위 테스트 16개, 공유 그룹 서비스 단위 테스트 14개 작성 (전체 통과)
+- 📎 Refs: F-07, F-10, E2-1~E2-6, E4-1~E4-6
+
+**Stats:**
+- 9 files changed
+- 1,623 insertions(+)
+
+---
+
 ## Commit Convention
 
 이 프로젝트는 [Conventional Commits](https://www.conventionalcommits.org/) 규칙을 따릅니다.
@@ -202,7 +223,7 @@ docs: README 설치 가이드 업데이트
 ## Statistics
 
 ### 전체 통계
-- Total Commits: 5 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2)
+- Total Commits: 6 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc)
 - Contributors: 1
 - Branches: 4 (main, dev, feature/backend-init-auth, feature/dashboard-simulation)
 - Tags: 0
