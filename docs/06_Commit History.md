@@ -80,6 +80,90 @@ frontend/nginx.conf
 
 ---
 
+#### `cbb530c` - feat(backend): Go Fiber 프로젝트 초기화 및 인증 시스템 구현
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/backend-init-auth  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ Go Fiber v2 프로젝트 구조 셋업 (Handler → Service → Repository)
+- ✅ GORM PostgreSQL 연결 및 커넥션 풀 설정
+- ✅ GORM 모델 구현: User, Subscription, Category, ShareGroup, ShareMember, SubscriptionShare
+- ✅ OAuth 2.0 인증 플로우 구현 (Google/Apple/Naver/Kakao) + JWT 세션 관리
+- ✅ JWT 미들웨어 추가 (Access 1h / Refresh 7d)
+- ✅ 커스텀 에러 타입, 표준 API 응답 헬퍼, 입력값 검증 유틸 추가
+- ✅ 헬스체크 엔드포인트 및 Graceful Shutdown 구현
+- ✅ 모델, 유틸, 인증 서비스 단위 테스트 작성 (전체 통과)
+- 📎 Refs: F-01, F-03, E1-1~E1-7, E4-1~E4-6, NFR-2.2
+
+**Stats:**
+- 26 files changed
+- 3,236 insertions(+)
+
+---
+
+#### `4de11b0` - feat(backend): 구독 CRUD API 구현
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/backend-init-auth  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ SubscriptionRepository 구현 (필터링/정렬/페이지네이션 지원)
+- ✅ SubscriptionService 구현 (생성/조회/수정/삭제/만족도 평가)
+- ✅ SubscriptionHandler 구현 (6개 엔드포인트)
+- ✅ 소유권 검증 로직 추가 (타 사용자 접근 시 403 반환)
+- ✅ 금액 환산 필드 포함 응답 (monthlyAmount, annualAmount)
+- ✅ 입력값 검증: 서비스명 1-100자, 금액 0~9,999,999원, 만족도 1-5점
+- ✅ 구독 서비스 단위 테스트 28개 작성 (전체 통과)
+- 📎 Refs: F-02, F-04, E1-1~E1-7, E2-1~E2-6, E3-1~E3-6
+
+**Stats:**
+- 5 files changed
+- 1,298 insertions(+)
+
+---
+
+#### `737a7a2` - feat(backend): 대시보드 요약/해지 추천 API 및 시뮬레이션(해지/추가/적용) API 구현
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/dashboard-simulation  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ DashboardService: 월/연 총액, 활성/일시중지 카운트, 카테고리별 비중 계산
+- ✅ DashboardService: 만족도 1-2점 및 고비용 저만족도 기반 해지 추천 로직
+- ✅ SimulationService: 해지/추가 시뮬레이션 실시간 비용 변동 계산 (DB 미반영)
+- ✅ SimulationService: 시뮬레이션 적용 시 소유권 검증 후 Soft Delete 처리
+- ✅ DashboardHandler/SimulationHandler: 6개 엔드포인트 라우팅 추가
+- ✅ 대시보드 서비스 단위 테스트 15개, 시뮬레이션 서비스 단위 테스트 14개 작성 (전체 통과)
+- 📎 Refs: F-03, F-04, F-05, E1-1~E1-7
+
+**Stats:**
+- 7 files changed
+- 1,374 insertions(+)
+
+---
+
+#### `c70fbbc` - feat(backend): 카테고리 CRUD 및 공유 그룹 CRUD API 구현
+**Author**: haneumLee <2haneum@naver.com>  
+**Branch**: feature/dashboard-simulation  
+**Type**: Feature Implementation
+
+**주요 변경사항:**
+- ✅ CategoryRepository/Service/Handler: 시스템+사용자 카테고리 조회, 커스텀 카테고리 생성/수정/삭제
+- ✅ 시스템 카테고리 수정/삭제 방지, 삭제 시 구독 항목 '기타'로 자동 재배치
+- ✅ ShareGroupRepository/Service/Handler: 공유 그룹 CRUD 및 멤버 관리
+- ✅ 그룹 생성 시 소유자 자동 추가(isOwner=true), 최소 2명 검증
+- ✅ 소유권 검증 로직 적용(조회/수정/삭제)
+- ✅ 그룹 삭제 시 SubscriptionShare 레코드 자동 제거
+- ✅ 카테고리 서비스 단위 테스트 16개, 공유 그룹 서비스 단위 테스트 14개 작성 (전체 통과)
+- 📎 Refs: F-07, F-10, E2-1~E2-6, E4-1~E4-6
+
+**Stats:**
+- 9 files changed
+- 1,623 insertions(+)
+
+---
+
 ## Commit Convention
 
 이 프로젝트는 [Conventional Commits](https://www.conventionalcommits.org/) 규칙을 따릅니다.
@@ -139,9 +223,9 @@ docs: README 설치 가이드 업데이트
 ## Statistics
 
 ### 전체 통계
-- Total Commits: 1
+- Total Commits: 6 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc)
 - Contributors: 1
-- Branches: 2 (main, dev)
+- Branches: 4 (main, dev, feature/backend-init-auth, feature/dashboard-simulation)
 - Tags: 0
 
 ### 브랜치별 커밋 수
