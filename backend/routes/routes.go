@@ -63,6 +63,8 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	// Calendar routes.
 	calendar := protected.Group("/calendar")
 	calendar.Get("/monthly", h.Calendar.GetMonthlyCalendar)
+	calendar.Get("/daily", h.Calendar.GetDayDetail)
+	calendar.Get("/upcoming", h.Calendar.GetUpcomingPayments)
 
 	// Category routes.
 	categories := protected.Group("/categories")
