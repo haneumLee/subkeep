@@ -124,3 +124,52 @@ git push -u origin feature/frontend-init
   showFooter={false}
 >
 ```
+
+---
+
+### TS-010: Google OAuth 로그인 401 Unauthorized
+
+**상황**: 프로덕션 환경에서 Google 로그인 버튼 클릭 시 401 에러 반환
+**문제**: `routes.go`에서 `auth.Group("", middleware.AuthMiddleware(...))`로 보호 라우트를 등록하면, Fiber가 해당 그룹 이후에 등록된 **모든** `/auth/*` 라우트에 인증 미들웨어를 적용함. 공개 라우트인 `/:provider`(OAuth 리다이렉트)가 보호 그룹 뒤에 등록되어 있어 인증 미들웨어가 먼저 실행되어 토큰 없이 접근 시 401 반환.
+**방법**: 빈 prefix의 서브 그룹 미들웨어 대신, 보호가 필요한 라우트에만 개별적으로 미들웨어를 적용
+**해결**:
+```diff
+  // Auth routes (public).
+  auth := api.Group("/auth")
+  auth.Get("/dev-login", h.Auth.DevLogin)
+  auth.Post("/refresh", h.Auth.RefreshToken)
+
+- // Auth routes (protected) — must be before /:provider to avoid conflict.
+- authProtected := auth.Group("", middleware.AuthMiddleware(h.AuthService))
+- authProtected.Post("/logout", h.Auth.Logout)
+- authProtected.Get("/me", h.Auth.GetMe)
++ // Auth routes (protected) — per-route middleware to avoid blocking public OAuth routes.
++ authMw := middleware.AuthMiddleware(h.AuthService)
++ auth.Post("/logout", authMw, h.Auth.Logout)
++ auth.Get("/me", authMw, h.Auth.GetMe)
+
+  // OAuth routes (public) — /:provider must be last to avoid catching /me, /refresh, etc.
+  auth.Get("/:provider", h.Auth.OAuthRedirect)
+  auth.Post("/:provider/callback", h.Auth.OAuthCallback)
+```
+**교훈**: Fiber에서 `Group("", middleware)`는 동일 prefix의 모든 후속 라우트에 영향을 줄 수 있으므로, 공개/보호 라우트가 혼재된 경우 per-route 미들웨어 방식이 안전함.
+
+---
+
+### TS-011: 카카오 로그인 프로필 이미지 깨짐
+
+**상황**: 카카오 로그인 후 사이드바 프로필 이미지가 깨진 아이콘으로 표시됨
+**문제**: 카카오 프로필 이미지 URL이 `http://k.kakaocdn.net/...`으로 HTTP 프로토콜을 사용하는데, `next.config.js`의 `remotePatterns`에 `{ protocol: 'https', hostname: '*.kakaocdn.net' }`만 등록되어 있어 HTTP URL이 차단됨
+**방법**: `remotePatterns`에 HTTP 프로토콜용 카카오 CDN 패턴 추가
+**해결**:
+```diff
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '*.googleusercontent.com' },
++     { protocol: 'http', hostname: '*.kakaocdn.net' },
+      { protocol: 'https', hostname: '*.kakaocdn.net' },
+      { protocol: 'https', hostname: '*.pstatic.net' },
+    ],
+  },
+```
+**교훈**: OAuth 프로바이더마다 프로필 이미지 URL의 프로토콜이 다를 수 있으므로(카카오는 HTTP), Next.js `remotePatterns` 설정 시 실제 URL을 확인하여 적절한 프로토콜을 등록해야 함.

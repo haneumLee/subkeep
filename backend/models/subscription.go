@@ -14,11 +14,13 @@ type Subscription struct {
 	UserID          uuid.UUID          `gorm:"type:uuid;not null;index" json:"userId" validate:"required"`
 	ServiceName     string             `gorm:"type:varchar(100);not null" json:"serviceName" validate:"required,min=1,max=100"`
 	CategoryID      *uuid.UUID         `gorm:"type:uuid;index" json:"categoryId" validate:"omitempty"`
+	FolderID        *uuid.UUID         `gorm:"type:uuid;index" json:"folderId" validate:"omitempty"`
 	Amount          int                `gorm:"type:int;not null" json:"amount" validate:"required,gte=0"`
 	BillingCycle    BillingCycle       `gorm:"type:varchar(20);not null" json:"billingCycle" validate:"required,oneof=weekly monthly yearly"`
 	Currency        string             `gorm:"type:varchar(3);not null;default:'KRW'" json:"currency" validate:"required,len=3"`
 	NextBillingDate time.Time          `gorm:"type:date;not null" json:"nextBillingDate" validate:"required"`
 	AutoRenew       bool               `gorm:"not null;default:true" json:"autoRenew"`
+	IsTrial         bool               `gorm:"not null;default:false" json:"isTrial"`
 	Status          SubscriptionStatus `gorm:"type:varchar(20);not null;default:'active'" json:"status" validate:"required,oneof=active paused cancelled"`
 	SatisfactionScore *int             `gorm:"type:int" json:"satisfactionScore" validate:"omitempty,min=1,max=5"`
 	Note            *string            `gorm:"type:text" json:"note" validate:"omitempty,max=500"`
@@ -31,6 +33,7 @@ type Subscription struct {
 	// Associations
 	User     User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"user,omitempty"`
 	Category *Category `gorm:"foreignKey:CategoryID;constraint:OnDelete:SET NULL" json:"category,omitempty"`
+	Folder   *Folder   `gorm:"foreignKey:FolderID;constraint:OnDelete:SET NULL" json:"folder,omitempty"`
 }
 
 // TableName overrides the default table name.

@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { useCategories } from '@/lib/hooks/useCategories';
+import { useFolders } from '@/lib/hooks/useFolders';
 import {
   useCreateSubscription,
   useUpdateSubscription,
@@ -20,11 +21,13 @@ const subscriptionSchema = z.object({
     .min(1, '서비스명은 필수입니다')
     .max(50, '서비스명은 50자 이내여야 합니다'),
   categoryId: z.string().optional(),
+  folderId: z.string().optional(),
   amount: z.number().min(0, '금액은 0 이상이어야 합니다'),
   billingCycle: z.enum(['weekly', 'monthly', 'yearly']),
   nextBillingDate: z.string().min(1, '다음 결제일은 필수입니다'),
   startDate: z.string().min(1, '시작일은 필수입니다'),
   autoRenew: z.boolean(),
+  isTrial: z.boolean(),
   satisfactionScore: z.number().min(1).max(5).optional(),
   note: z.string().max(500, '메모는 500자 이내여야 합니다').optional(),
   serviceUrl: z.string().url('올바른 URL 형식이 아닙니다').optional().or(z.literal('')),
@@ -44,6 +47,7 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
   const [satisfactionScore, setSatisfactionScore] = useState(3);
 
   const { data: categories } = useCategories();
+  const { data: folders } = useFolders();
   const createMutation = useCreateSubscription();
   const updateMutation = useUpdateSubscription();
 
@@ -61,11 +65,13 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
     defaultValues: {
       serviceName: '',
       categoryId: '',
+      folderId: '',
       amount: 0,
       billingCycle: 'monthly',
       nextBillingDate: new Date().toISOString().split('T')[0],
       startDate: new Date().toISOString().split('T')[0],
       autoRenew: true,
+      isTrial: false,
       note: '',
       serviceUrl: '',
     },
@@ -78,11 +84,13 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
       reset({
         serviceName: subscription.serviceName,
         categoryId: subscription.categoryId || '',
+        folderId: subscription.folderId || '',
         amount: subscription.amount,
         billingCycle: subscription.billingCycle,
         nextBillingDate: subscription.nextBillingDate.split('T')[0],
         startDate: subscription.startDate.split('T')[0],
         autoRenew: subscription.autoRenew,
+        isTrial: subscription.isTrial || false,
         note: subscription.note || '',
         serviceUrl: subscription.serviceUrl || '',
       });
@@ -91,11 +99,13 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
       reset({
         serviceName: '',
         categoryId: '',
+        folderId: '',
         amount: 0,
         billingCycle: 'monthly',
         nextBillingDate: new Date().toISOString().split('T')[0],
         startDate: new Date().toISOString().split('T')[0],
         autoRenew: true,
+        isTrial: false,
         note: '',
         serviceUrl: '',
       });
@@ -113,6 +123,8 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
     const requestData: CreateSubscriptionRequest = {
       ...data,
       categoryId: data.categoryId || undefined,
+      folderId: data.folderId || undefined,
+      isTrial: data.isTrial,
       satisfactionScore,
       note: data.note || undefined,
       serviceUrl: data.serviceUrl || undefined,
@@ -185,6 +197,22 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
             </select>
           </div>
 
+          {/* Folder */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">폴더</label>
+            <select
+              {...register('folderId')}
+              className="mt-1 w-full rounded-lg border-2 border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">선택 안 함</option>
+              {folders?.map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Amount & Billing Cycle */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -249,17 +277,30 @@ export default function SubscriptionForm({ isOpen, onClose, subscription }: Subs
             </div>
           </div>
 
-          {/* Auto Renew */}
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              {...register('autoRenew')}
-              id="autoRenew"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">
-              자동 갱신
-            </label>
+          {/* Auto Renew & Trial */}
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                {...register('autoRenew')}
+                id="autoRenew"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="autoRenew" className="text-sm font-medium text-gray-700">
+                자동 갱신
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                {...register('isTrial')}
+                id="isTrial"
+                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+              />
+              <label htmlFor="isTrial" className="text-sm font-medium text-gray-700">
+                체험(무료체험)
+              </label>
+            </div>
           </div>
 
           {/* Satisfaction Score */}

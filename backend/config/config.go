@@ -12,13 +12,14 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	OAuth    OAuthConfig
-	CORS     CORSConfig
-	Log      LogConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Redis     RedisConfig
+	JWT       JWTConfig
+	OAuth     OAuthConfig
+	CORS      CORSConfig
+	Log       LogConfig
+	RateLimit RateLimitConfig
 }
 
 // ServerConfig holds HTTP server settings.
@@ -70,10 +71,15 @@ type LogConfig struct {
 	Format string
 }
 
+// RateLimitConfig holds rate limiting settings.
+type RateLimitConfig struct {
+	RequestsPerMinute int
+	Burst             int
+}
+
 // OAuthConfig holds OAuth provider settings.
 type OAuthConfig struct {
 	Google OAuthProviderConfig
-	Apple  OAuthProviderConfig
 	Naver  OAuthProviderConfig
 	Kakao  OAuthProviderConfig
 }
@@ -107,13 +113,11 @@ func (c *Config) IsProduction() bool {
 }
 
 // Load reads configuration from environment variables.
-// It loads .env file in non-production environments.
+// It always attempts to load .env file (environment variables take precedence).
 func Load() *Config {
 	env := getEnv("ENV", "development")
-	if env != "production" {
-		if err := godotenv.Load(); err != nil {
-			slog.Warn("failed to load .env file, using environment variables", "error", err)
-		}
+	if err := godotenv.Load(); err != nil {
+		slog.Warn("failed to load .env file, using environment variables", "error", err)
 	}
 
 	cfg := &Config{
@@ -154,16 +158,15 @@ func Load() *Config {
 			Level:  getEnv("LOG_LEVEL", "info"),
 			Format: getEnv("LOG_FORMAT", "text"),
 		},
+		RateLimit: RateLimitConfig{
+			RequestsPerMinute: getEnvInt("RATE_LIMIT_REQUESTS_PER_MINUTE", 60),
+			Burst:             getEnvInt("RATE_LIMIT_BURST", 10),
+		},
 		OAuth: OAuthConfig{
 			Google: OAuthProviderConfig{
 				ClientID:     getEnv("OAUTH_GOOGLE_CLIENT_ID", ""),
 				ClientSecret: getEnv("OAUTH_GOOGLE_CLIENT_SECRET", ""),
 				RedirectURL:  getEnv("OAUTH_GOOGLE_REDIRECT_URL", ""),
-			},
-			Apple: OAuthProviderConfig{
-				ClientID:     getEnv("OAUTH_APPLE_CLIENT_ID", ""),
-				ClientSecret: getEnv("OAUTH_APPLE_CLIENT_SECRET", ""),
-				RedirectURL:  getEnv("OAUTH_APPLE_REDIRECT_URL", ""),
 			},
 			Naver: OAuthProviderConfig{
 				ClientID:     getEnv("OAUTH_NAVER_CLIENT_ID", ""),

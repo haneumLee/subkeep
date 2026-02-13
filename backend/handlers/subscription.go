@@ -70,6 +70,7 @@ func (h *SubscriptionHandler) GetAll(c *fiber.Ctx) error {
 	filter := repositories.SubscriptionFilter{
 		Status:     c.Query("status"),
 		CategoryID: c.Query("categoryId"),
+		FolderID:   c.Query("folderId"),
 		SortBy:     c.Query("sortBy"),
 		SortOrder:  c.Query("sortOrder"),
 		Page:       page,

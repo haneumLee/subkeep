@@ -2,7 +2,7 @@
 export type BillingCycle = 'weekly' | 'monthly' | 'yearly';
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled';
 export type SplitType = 'equal' | 'custom_amount' | 'custom_ratio';
-export type AuthProvider = 'google' | 'apple' | 'naver' | 'kakao';
+export type AuthProvider = 'google' | 'naver' | 'kakao';
 
 // ===== Models =====
 export interface User {
@@ -29,16 +29,27 @@ export interface Category {
   updatedAt: string;
 }
 
+export interface Folder {
+  id: string;
+  userId: string;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Subscription {
   id: string;
   userId: string;
   serviceName: string;
   categoryId: string | null;
+  folderId: string | null;
   amount: number;
   billingCycle: BillingCycle;
   currency: string;
   nextBillingDate: string;
   autoRenew: boolean;
+  isTrial: boolean;
   status: SubscriptionStatus;
   satisfactionScore: number | null;
   note: string | null;
@@ -47,6 +58,7 @@ export interface Subscription {
   createdAt: string;
   updatedAt: string;
   category?: Category;
+  folder?: Folder;
   monthlyAmount: number;
   annualAmount: number;
 }
@@ -86,11 +98,13 @@ export interface SubscriptionShare {
 export interface CreateSubscriptionRequest {
   serviceName: string;
   categoryId?: string;
+  folderId?: string;
   amount: number;
   billingCycle: BillingCycle;
   currency?: string;
   nextBillingDate: string;
   autoRenew?: boolean;
+  isTrial?: boolean;
   status?: SubscriptionStatus;
   satisfactionScore?: number;
   note?: string;
@@ -134,6 +148,16 @@ export interface CreateCategoryRequest {
   name: string;
   color?: string;
   icon?: string;
+  sortOrder?: number;
+}
+
+export interface CreateFolderRequest {
+  name: string;
+  sortOrder?: number;
+}
+
+export interface UpdateFolderRequest {
+  name?: string;
   sortOrder?: number;
 }
 

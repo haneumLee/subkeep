@@ -16,6 +16,7 @@ type Handlers struct {
 	Simulation        *handlers.SimulationHandler
 	Calendar          *handlers.CalendarHandler
 	Category          *handlers.CategoryHandler
+	Folder            *handlers.FolderHandler
 	ShareGroup        *handlers.ShareGroupHandler
 	SubscriptionShare *handlers.SubscriptionShareHandler
 	Report            *handlers.ReportHandler
@@ -31,10 +32,10 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	auth.Get("/dev-login", h.Auth.DevLogin)
 	auth.Post("/refresh", h.Auth.RefreshToken)
 
-	// Auth routes (protected) — must be before /:provider to avoid conflict.
-	authProtected := auth.Group("", middleware.AuthMiddleware(h.AuthService))
-	authProtected.Post("/logout", h.Auth.Logout)
-	authProtected.Get("/me", h.Auth.GetMe)
+	// Auth routes (protected) — per-route middleware to avoid blocking public OAuth routes.
+	authMw := middleware.AuthMiddleware(h.AuthService)
+	auth.Post("/logout", authMw, h.Auth.Logout)
+	auth.Get("/me", authMw, h.Auth.GetMe)
 
 	// OAuth routes (public) — /:provider must be last to avoid catching /me, /refresh, etc.
 	auth.Get("/:provider", h.Auth.OAuthRedirect)
@@ -77,6 +78,13 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	categories.Post("/", h.Category.Create)
 	categories.Put("/:id", h.Category.Update)
 	categories.Delete("/:id", h.Category.Delete)
+
+	// Folder routes.
+	folders := protected.Group("/folders")
+	folders.Get("/", h.Folder.GetAll)
+	folders.Post("/", h.Folder.Create)
+	folders.Put("/:id", h.Folder.Update)
+	folders.Delete("/:id", h.Folder.Delete)
 
 	// Share group routes.
 	shareGroups := protected.Group("/share-groups")

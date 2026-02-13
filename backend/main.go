@@ -10,6 +10,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	fiberlogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
@@ -75,6 +77,37 @@ func main() {
 		MaxAge:           86400,
 	}))
 
+	// Security headers.
+	app.Use(helmet.New())
+
+	// Global rate limiter: limit per IP per minute.
+	app.Use(limiter.New(limiter.Config{
+		Max:               cfg.RateLimit.RequestsPerMinute,
+		Expiration:        1 * time.Minute,
+		LimitReached: func(c *fiber.Ctx) error {
+			slog.Warn("rate limit exceeded",
+				"ip", c.IP(),
+				"path", c.Path(),
+			)
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error":   "Too Many Requests",
+				"message": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+			})
+		},
+		KeyGenerator: func(c *fiber.Ctx) string {
+			// Cloudflare real IP (CF-Connecting-IP > X-Real-IP > RemoteIP)
+			if cfIP := c.Get("CF-Connecting-IP"); cfIP != "" {
+				return cfIP
+			}
+			if realIP := c.Get("X-Real-IP"); realIP != "" {
+				return realIP
+			}
+			return c.IP()
+		},
+		SkipFailedRequests:     false,
+		SkipSuccessfulRequests: false,
+	}))
+
 	// Auto-migrate database tables.
 	db := database.DB
 	if err := models.AutoMigrateAll(db); err != nil {
@@ -90,6 +123,7 @@ func main() {
 	userRepo := repositories.NewUserRepository(db)
 	subRepo := repositories.NewSubscriptionRepository(db)
 	catRepo := repositories.NewCategoryRepository(db)
+	folderRepo := repositories.NewFolderRepository(db)
 	shareGroupRepo := repositories.NewShareGroupRepository(db)
 	subShareRepo := repositories.NewSubscriptionShareRepository(db)
 
@@ -101,6 +135,7 @@ func main() {
 	simService := services.NewSimulationService(subRepo, subShareRepo)
 	calendarService := services.NewCalendarService(subRepo, subShareRepo)
 	catService := services.NewCategoryService(catRepo)
+	folderService := services.NewFolderService(folderRepo)
 	shareGroupService := services.NewShareGroupService(shareGroupRepo)
 	subShareService := services.NewSubscriptionShareService(subShareRepo, subRepo, shareGroupRepo)
 	reportService := services.NewReportService(subRepo, subShareRepo)
@@ -112,6 +147,7 @@ func main() {
 	simHandler := handlers.NewSimulationHandler(simService)
 	calendarHandler := handlers.NewCalendarHandler(calendarService)
 	catHandler := handlers.NewCategoryHandler(catService)
+	folderHandler := handlers.NewFolderHandler(folderService)
 	shareGroupHandler := handlers.NewShareGroupHandler(shareGroupService)
 	subShareHandler := handlers.NewSubscriptionShareHandler(subShareService)
 	reportHandler := handlers.NewReportHandler(reportService)
@@ -141,6 +177,7 @@ func main() {
 		Simulation:        simHandler,
 		Calendar:          calendarHandler,
 		Category:          catHandler,
+		Folder:            folderHandler,
 		ShareGroup:        shareGroupHandler,
 		SubscriptionShare: subShareHandler,
 		Report:            reportHandler,

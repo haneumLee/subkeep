@@ -49,6 +49,7 @@ func AutoMigrateAll(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&User{},
 		&Category{},
+		&Folder{},
 		&Subscription{},
 		&ShareGroup{},
 		&ShareMember{},

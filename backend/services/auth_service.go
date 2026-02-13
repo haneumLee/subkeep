@@ -259,7 +259,7 @@ func (s *AuthService) parseToken(tokenString string) (*TokenClaims, error) {
 // isValidProvider checks whether the given provider is supported.
 func isValidProvider(provider string) bool {
 	switch provider {
-	case "google", "apple", "naver", "kakao":
+	case "google", "naver", "kakao":
 		return true
 	default:
 		return false

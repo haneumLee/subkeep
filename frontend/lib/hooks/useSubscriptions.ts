@@ -11,6 +11,7 @@ import type {
 interface SubscriptionFilters {
   status?: string;
   categoryId?: string;
+  folderId?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   page?: number;

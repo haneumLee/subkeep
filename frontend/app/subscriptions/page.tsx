@@ -4,6 +4,9 @@ import { useState } from 'react';
 
 import SubscriptionCard from '@/components/subscription/SubscriptionCard';
 import SubscriptionForm from '@/components/subscription/SubscriptionForm';
+import FolderPanel from '@/components/subscription/FolderPanel';
+import FolderManagerPopup from '@/components/subscription/FolderManagerPopup';
+import CategoryManagerPopup from '@/components/subscription/CategoryManagerPopup';
 import { useCategories } from '@/lib/hooks/useCategories';
 import { useSubscriptions } from '@/lib/hooks/useSubscriptions';
 import type { Subscription } from '@/types';
@@ -11,10 +14,13 @@ import type { Subscription } from '@/types';
 export default function SubscriptionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<Subscription | undefined>();
+  const [showFolderManager, setShowFolderManager] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('active');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [folderFilter, setFolderFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('nextBillingDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -27,6 +33,7 @@ export default function SubscriptionsPage() {
   } = useSubscriptions({
     status: statusFilter || undefined,
     categoryId: categoryFilter || undefined,
+    folderId: folderFilter || undefined,
     sortBy,
     sortOrder,
     page: currentPage,
@@ -65,22 +72,47 @@ export default function SubscriptionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">구독 관리</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            전체 {subscriptionsData?.meta.total || 0}개의 구독
-          </p>
+    <div className="flex gap-6">
+      {/* Folder Panel - Left Sidebar */}
+      <FolderPanel
+        selectedFolderId={folderFilter}
+        onSelectFolder={(id) => {
+          setFolderFilter(id);
+          setCurrentPage(1);
+        }}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">구독 관리</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              전체 {subscriptionsData?.meta.total || 0}개의 구독
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFolderManager(true)}
+              className="rounded-lg border-2 border-gray-300 px-4 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              📁 폴더 관리
+            </button>
+            <button
+              onClick={() => setShowCategoryManager(true)}
+              className="rounded-lg border-2 border-gray-300 px-4 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              🏷️ 카테고리 관리
+            </button>
+            <button
+              onClick={() => setShowForm(true)}
+              className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              + 구독 추가
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-        >
-          + 구독 추가
-        </button>
-      </div>
 
         {/* Filters */}
         <div className="mb-6 rounded-lg border-2 border-gray-200 bg-white p-4">
@@ -242,6 +274,19 @@ export default function SubscriptionsPage() {
         onClose={handleCloseForm}
         subscription={editingSubscription}
       />
+
+      {/* Folder Manager Popup */}
+      <FolderManagerPopup
+        isOpen={showFolderManager}
+        onClose={() => setShowFolderManager(false)}
+      />
+
+      {/* Category Manager Popup */}
+      <CategoryManagerPopup
+        isOpen={showCategoryManager}
+        onClose={() => setShowCategoryManager(false)}
+      />
+      </div>
     </div>
   );
 }

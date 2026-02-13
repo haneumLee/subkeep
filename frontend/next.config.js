@@ -5,9 +5,9 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.googleusercontent.com' },
+      { protocol: 'http', hostname: '*.kakaocdn.net' },
       { protocol: 'https', hostname: '*.kakaocdn.net' },
       { protocol: 'https', hostname: '*.pstatic.net' },
-      { protocol: 'https', hostname: '*.apple.com' },
     ],
   },
   async rewrites() {

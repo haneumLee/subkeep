@@ -12,6 +12,7 @@ import (
 type SubscriptionFilter struct {
 	Status     string // "active", "paused", "cancelled", "" (all)
 	CategoryID string // filter by category UUID
+	FolderID   string // filter by folder UUID
 	SortBy     string // "amount", "satisfaction", "next_billing_date", "created_at"
 	SortOrder  string // "asc", "desc"
 	Page       int
@@ -60,7 +61,7 @@ func NewSubscriptionRepository(db *gorm.DB) SubscriptionRepository {
 // FindByID retrieves a subscription by its UUID, preloading the Category.
 func (r *subscriptionRepository) FindByID(id string) (*models.Subscription, error) {
 	var sub models.Subscription
-	if err := r.db.Preload("Category").Where("id = ?", id).First(&sub).Error; err != nil {
+	if err := r.db.Preload("Category").Preload("Folder").Where("id = ?", id).First(&sub).Error; err != nil {
 		return nil, fmt.Errorf("find subscription by id: %w", err)
 	}
 	return &sub, nil
@@ -81,6 +82,11 @@ func (r *subscriptionRepository) FindByUserID(userID string, filter Subscription
 	// Apply category filter.
 	if filter.CategoryID != "" {
 		query = query.Where("category_id = ?", filter.CategoryID)
+	}
+
+	// Apply folder filter.
+	if filter.FolderID != "" {
+		query = query.Where("folder_id = ?", filter.FolderID)
 	}
 
 	// Count total before pagination.
@@ -109,6 +115,7 @@ func (r *subscriptionRepository) FindByUserID(userID string, filter Subscription
 	var subs []*models.Subscription
 	if err := query.
 		Preload("Category").
+		Preload("Folder").
 		Order(orderClause).
 		Offset(offset).
 		Limit(filter.PerPage).

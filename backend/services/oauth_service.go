@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/golang-jwt/jwt/v5"
-
 	"github.com/subkeep/backend/config"
 	"github.com/subkeep/backend/utils"
 )
@@ -25,7 +23,6 @@ const (
 	naverAuthURL     = "https://nid.naver.com/oauth2.0/authorize"
 	naverTokenURL    = "https://nid.naver.com/oauth2.0/token"
 	naverUserURL     = "https://openapi.naver.com/v1/nid/me"
-	appleAuthURL     = "https://appleid.apple.com/auth/authorize"
 )
 
 // OAuthService handles OAuth provider integrations.
@@ -63,10 +60,6 @@ func (s *OAuthService) GetAuthorizationURL(provider string, redirectURI string, 
 		authURL = naverAuthURL
 		clientID = s.oauthConfig.Naver.ClientID
 		scope = ""
-	case "apple":
-		authURL = appleAuthURL
-		clientID = s.oauthConfig.Apple.ClientID
-		scope = "name email"
 	default:
 		return "", utils.ErrBadRequest("지원하지 않는 인증 제공자입니다: " + provider)
 	}
@@ -101,8 +94,6 @@ func (s *OAuthService) ExchangeCode(provider string, code string, redirectURI st
 		return s.exchangeKakao(code, redirectURI)
 	case "naver":
 		return s.exchangeNaver(code, redirectURI)
-	case "apple":
-		return s.exchangeApple(code, redirectURI)
 	default:
 		return nil, utils.ErrBadRequest("지원하지 않는 인증 제공자입니다: " + provider)
 	}
@@ -225,49 +216,6 @@ func (s *OAuthService) exchangeNaver(code string, redirectURI string) (*OAuthUse
 		oauthUser.Email = getString(response, "email")
 		oauthUser.Nickname = getString(response, "nickname")
 		oauthUser.AvatarURL = getString(response, "profile_image")
-	}
-
-	return oauthUser, nil
-}
-
-// exchangeApple handles Apple Sign In using id_token (JWT) decoding.
-func (s *OAuthService) exchangeApple(code string, redirectURI string) (*OAuthUser, error) {
-	cfg := s.oauthConfig.Apple
-
-	// Exchange code for token response (which includes id_token).
-	tokenData, err := s.exchangeCodeForToken("https://appleid.apple.com/auth/token", url.Values{
-		"code":          {code},
-		"client_id":     {cfg.ClientID},
-		"client_secret": {cfg.ClientSecret},
-		"redirect_uri":  {redirectURI},
-		"grant_type":    {"authorization_code"},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("apple token exchange: %w", err)
-	}
-
-	idToken, ok := tokenData["id_token"].(string)
-	if !ok || idToken == "" {
-		return nil, fmt.Errorf("apple: missing id_token in response")
-	}
-
-	// Parse the id_token without verification for MVP.
-	// In production, verify with Apple's public keys.
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	token, _, err := parser.ParseUnverified(idToken, jwt.MapClaims{})
-	if err != nil {
-		return nil, fmt.Errorf("apple: parse id_token: %w", err)
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("apple: invalid id_token claims")
-	}
-
-	oauthUser := &OAuthUser{
-		Provider:       "apple",
-		ProviderUserID: getString(claims, "sub"),
-		Email:          getString(claims, "email"),
 	}
 
 	return oauthUser, nil

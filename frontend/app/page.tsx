@@ -34,16 +34,6 @@ const OAUTH_PROVIDERS = [
     ),
   },
   {
-    id: 'apple' as const,
-    name: 'Apple',
-    color: 'bg-black text-white hover:bg-slate-800',
-    icon: (
-      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-      </svg>
-    ),
-  },
-  {
     id: 'naver' as const,
     name: 'Naver',
     color: 'bg-[#03C75A] text-white hover:bg-[#02b350]',
@@ -145,7 +135,7 @@ export default function LoginPage() {
             에 동의하게 됩니다
           </p>
 
-          {/* Dev Login - 개발 테스트 */}
+          {/* 체험 계정 */}
           <div className="mt-4 border-t border-slate-200 pt-4">
             <Button
               onClick={handleDevLogin}
@@ -153,8 +143,11 @@ export default function LoginPage() {
               variant="secondary"
               size="lg"
             >
-              🔧 개발 테스트 로그인
+              🎯 체험 계정으로 시작
             </Button>
+            <p className="mt-2 text-center text-xs text-slate-400">
+              로그인 없이 서비스를 미리 체험해 볼 수 있습니다
+            </p>
           </div>
         </div>
 

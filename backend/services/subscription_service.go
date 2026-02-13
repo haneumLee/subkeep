@@ -18,10 +18,12 @@ import (
 type CreateSubscriptionRequest struct {
 	ServiceName       string  `json:"serviceName" validate:"required,min=1,max=100"`
 	CategoryID        *string `json:"categoryId" validate:"omitempty,uuid"`
+	FolderID          *string `json:"folderId" validate:"omitempty,uuid"`
 	Amount            int     `json:"amount" validate:"required,gte=0,lte=9999999"`
 	BillingCycle      string  `json:"billingCycle" validate:"required,oneof=weekly monthly yearly"`
 	NextBillingDate   string  `json:"nextBillingDate" validate:"required"`
 	AutoRenew         *bool   `json:"autoRenew"`
+	IsTrial           *bool   `json:"isTrial"`
 	Status            string  `json:"status" validate:"omitempty,oneof=active paused"`
 	SatisfactionScore *int    `json:"satisfactionScore" validate:"omitempty,min=1,max=5"`
 	Note              *string `json:"note" validate:"omitempty,max=500"`
@@ -33,10 +35,12 @@ type CreateSubscriptionRequest struct {
 type UpdateSubscriptionRequest struct {
 	ServiceName       *string `json:"serviceName" validate:"omitempty,min=1,max=100"`
 	CategoryID        *string `json:"categoryId" validate:"omitempty,uuid"`
+	FolderID          *string `json:"folderId" validate:"omitempty,uuid"`
 	Amount            *int    `json:"amount" validate:"omitempty,gte=0,lte=9999999"`
 	BillingCycle      *string `json:"billingCycle" validate:"omitempty,oneof=weekly monthly yearly"`
 	NextBillingDate   *string `json:"nextBillingDate"`
 	AutoRenew         *bool   `json:"autoRenew"`
+	IsTrial           *bool   `json:"isTrial"`
 	Status            *string `json:"status" validate:"omitempty,oneof=active paused cancelled"`
 	SatisfactionScore *int    `json:"satisfactionScore" validate:"omitempty,min=1,max=5"`
 	Note              *string `json:"note" validate:"omitempty,max=500"`
@@ -151,10 +155,26 @@ func (s *SubscriptionService) CreateSubscription(userID string, req *CreateSubsc
 		categoryID = &cid
 	}
 
+	// Parse folder ID.
+	var folderID *uuid.UUID
+	if req.FolderID != nil && *req.FolderID != "" {
+		fid, parseErr := uuid.Parse(*req.FolderID)
+		if parseErr != nil {
+			return nil, utils.ErrValidation("유효하지 않은 폴더 ID입니다")
+		}
+		folderID = &fid
+	}
+
 	// Determine auto-renew (default true).
 	autoRenew := true
 	if req.AutoRenew != nil {
 		autoRenew = *req.AutoRenew
+	}
+
+	// Determine isTrial (default false).
+	isTrial := false
+	if req.IsTrial != nil {
+		isTrial = *req.IsTrial
 	}
 
 	// Determine status (default active).
@@ -167,11 +187,13 @@ func (s *SubscriptionService) CreateSubscription(userID string, req *CreateSubsc
 		UserID:            uid,
 		ServiceName:       req.ServiceName,
 		CategoryID:        categoryID,
+		FolderID:          folderID,
 		Amount:            req.Amount,
 		BillingCycle:      models.BillingCycle(req.BillingCycle),
 		Currency:          "KRW",
 		NextBillingDate:   nextBillingDate,
 		AutoRenew:         autoRenew,
+		IsTrial:           isTrial,
 		Status:            status,
 		SatisfactionScore: req.SatisfactionScore,
 		Note:              req.Note,
@@ -227,6 +249,18 @@ func (s *SubscriptionService) UpdateSubscription(userID, subID string, req *Upda
 		}
 	}
 
+	if req.FolderID != nil {
+		if *req.FolderID == "" {
+			sub.FolderID = nil
+		} else {
+			fid, parseErr := uuid.Parse(*req.FolderID)
+			if parseErr != nil {
+				return nil, utils.ErrValidation("유효하지 않은 폴더 ID입니다")
+			}
+			sub.FolderID = &fid
+		}
+	}
+
 	if req.Amount != nil {
 		sub.Amount = *req.Amount
 		if *req.Amount > 1000000 {
@@ -248,6 +282,10 @@ func (s *SubscriptionService) UpdateSubscription(userID, subID string, req *Upda
 
 	if req.AutoRenew != nil {
 		sub.AutoRenew = *req.AutoRenew
+	}
+
+	if req.IsTrial != nil {
+		sub.IsTrial = *req.IsTrial
 	}
 
 	if req.Status != nil {
