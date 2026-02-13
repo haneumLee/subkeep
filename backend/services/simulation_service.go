@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"math"
 	"sort"
+	"sync"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -41,14 +43,27 @@ type SimulationResult struct {
 	CategoryBreakdown     []CategoryBreakdown `json:"categoryBreakdown"`
 }
 
+// undoEntry stores the subscription IDs that were soft-deleted by ApplySimulation.
+type undoEntry struct {
+	subscriptionIDs []string
+	expiresAt       time.Time
+}
+
 // SimulationService handles simulation-related business logic.
 type SimulationService struct {
-	subRepo repositories.SubscriptionRepository
+	subRepo   repositories.SubscriptionRepository
+	shareRepo repositories.SubscriptionShareRepository
+	undoStore map[string]*undoEntry // key: userID
+	undoMu    sync.Mutex
 }
 
 // NewSimulationService creates a new SimulationService.
-func NewSimulationService(subRepo repositories.SubscriptionRepository) *SimulationService {
-	return &SimulationService{subRepo: subRepo}
+func NewSimulationService(subRepo repositories.SubscriptionRepository, shareRepo repositories.SubscriptionShareRepository) *SimulationService {
+	return &SimulationService{
+		subRepo:   subRepo,
+		shareRepo: shareRepo,
+		undoStore: make(map[string]*undoEntry),
+	}
 }
 
 // SimulateCancel simulates cancelling the given subscriptions and returns the impact.
@@ -87,6 +102,9 @@ func (s *SimulationService) SimulateCancel(userID string, req *CancelSimulationR
 		}
 	}
 
+	// Fetch subscription shares for the user.
+	shareMap := buildShareMap(s.shareRepo, userID)
+
 	// Calculate current and simulated totals.
 	currentTotal := 0
 	simulatedTotal := 0
@@ -95,14 +113,18 @@ func (s *SimulationService) SimulateCancel(userID string, req *CancelSimulationR
 
 	for _, sub := range activeSubs {
 		monthly := sub.MonthlyAmount()
-		currentTotal += monthly
+		personalMonthly := monthly
+		if share, ok := shareMap[sub.ID.String()]; ok {
+			personalMonthly = share.PersonalAmount(monthly)
+		}
+		currentTotal += personalMonthly
 
 		if cancelSet[sub.ID.String()] {
 			continue
 		}
 
-		simulatedTotal += monthly
-		addToCategoryGroup(categoryMap, sub, monthly)
+		simulatedTotal += personalMonthly
+		addToCategoryGroup(categoryMap, sub, personalMonthly)
 	}
 
 	breakdown := buildCategoryBreakdown(categoryMap, simulatedTotal)
@@ -134,14 +156,21 @@ func (s *SimulationService) SimulateAdd(userID string, req *AddSimulationRequest
 		return nil, utils.ErrInternal("시뮬레이션 데이터를 조회할 수 없습니다")
 	}
 
+	// Fetch subscription shares for the user.
+	shareMap := buildShareMap(s.shareRepo, userID)
+
 	// Calculate current total and category breakdown.
 	currentTotal := 0
 	categoryMap := make(map[string]*categoryGroupData)
 
 	for _, sub := range activeSubs {
 		monthly := sub.MonthlyAmount()
-		currentTotal += monthly
-		addToCategoryGroup(categoryMap, sub, monthly)
+		personalMonthly := monthly
+		if share, ok := shareMap[sub.ID.String()]; ok {
+			personalMonthly = share.PersonalAmount(monthly)
+		}
+		currentTotal += personalMonthly
+		addToCategoryGroup(categoryMap, sub, personalMonthly)
 	}
 
 	// Calculate the virtual item's monthly amount.
@@ -206,6 +235,15 @@ func (s *SimulationService) ApplySimulation(userID string, req *ApplySimulationR
 		}
 	}
 
+	// 적용 전 상태를 undo 스토어에 저장 (30초 TTL).
+	s.undoMu.Lock()
+	s.undoStore[userID] = &undoEntry{
+		subscriptionIDs: make([]string, len(req.SubscriptionIDs)),
+		expiresAt:       time.Now().Add(30 * time.Second),
+	}
+	copy(s.undoStore[userID].subscriptionIDs, req.SubscriptionIDs)
+	s.undoMu.Unlock()
+
 	// Soft-delete all selected subscriptions.
 	for _, id := range req.SubscriptionIDs {
 		if err := s.subRepo.Delete(id); err != nil {
@@ -215,6 +253,34 @@ func (s *SimulationService) ApplySimulation(userID string, req *ApplySimulationR
 	}
 
 	slog.Info("시뮬레이션 적용 완료", "userID", userID, "action", req.Action, "count", len(req.SubscriptionIDs))
+	return nil
+}
+
+// UndoSimulation reverses the last ApplySimulation for the given user within 30 seconds.
+func (s *SimulationService) UndoSimulation(userID string) error {
+	s.undoMu.Lock()
+	entry, ok := s.undoStore[userID]
+	if ok {
+		delete(s.undoStore, userID)
+	}
+	s.undoMu.Unlock()
+
+	if !ok {
+		return utils.ErrNotFound("실행 취소할 작업이 없습니다")
+	}
+
+	if time.Now().After(entry.expiresAt) {
+		return utils.ErrBadRequest("실행 취소 기간이 만료되었습니다")
+	}
+
+	for _, id := range entry.subscriptionIDs {
+		if err := s.subRepo.Restore(id); err != nil {
+			slog.Error("시뮬레이션 실행 취소 복원 실패", "subID", id, "error", err)
+			return utils.ErrInternal("실행 취소에 실패했습니다: " + id)
+		}
+	}
+
+	slog.Info("시뮬레이션 실행 취소 완료", "userID", userID, "count", len(entry.subscriptionIDs))
 	return nil
 }
 

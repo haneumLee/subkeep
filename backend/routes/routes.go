@@ -10,13 +10,14 @@ import (
 
 // Handlers holds all handler instances used by the router.
 type Handlers struct {
-	Auth         *handlers.AuthHandler
-	Subscription *handlers.SubscriptionHandler
-	Dashboard    *handlers.DashboardHandler
-	Simulation   *handlers.SimulationHandler
-	Category     *handlers.CategoryHandler
-	ShareGroup   *handlers.ShareGroupHandler
-	AuthService  *services.AuthService
+	Auth              *handlers.AuthHandler
+	Subscription      *handlers.SubscriptionHandler
+	Dashboard         *handlers.DashboardHandler
+	Simulation        *handlers.SimulationHandler
+	Category          *handlers.CategoryHandler
+	ShareGroup        *handlers.ShareGroupHandler
+	SubscriptionShare *handlers.SubscriptionShareHandler
+	AuthService       *services.AuthService
 }
 
 // SetupRoutes configures all API routes on the Fiber app.
@@ -55,6 +56,7 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	simulation.Post("/cancel", h.Simulation.SimulateCancel)
 	simulation.Post("/add", h.Simulation.SimulateAdd)
 	simulation.Post("/apply", h.Simulation.ApplySimulation)
+	simulation.Post("/undo", h.Simulation.UndoSimulation)
 
 	// Category routes.
 	categories := protected.Group("/categories")
@@ -70,4 +72,12 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	shareGroups.Post("/", h.ShareGroup.Create)
 	shareGroups.Put("/:id", h.ShareGroup.Update)
 	shareGroups.Delete("/:id", h.ShareGroup.Delete)
+
+	// Subscription share routes.
+	subs.Post("/:id/share", h.SubscriptionShare.Link)
+	subs.Get("/:id/share", h.SubscriptionShare.GetBySubscription)
+
+	subscriptionShares := protected.Group("/subscription-shares")
+	subscriptionShares.Put("/:id", h.SubscriptionShare.Update)
+	subscriptionShares.Delete("/:id", h.SubscriptionShare.Unlink)
 }

@@ -10,6 +10,20 @@ import (
 	"github.com/subkeep/backend/utils"
 )
 
+// buildShareMap fetches subscription shares for the user and returns a map keyed by subscription ID.
+func buildShareMap(shareRepo repositories.SubscriptionShareRepository, userID string) map[string]*models.SubscriptionShare {
+	shareMap := make(map[string]*models.SubscriptionShare)
+	shares, err := shareRepo.FindByUserID(userID)
+	if err != nil {
+		slog.Error("구독 공유 분담 조회 실패", "userID", userID, "error", err)
+		return shareMap
+	}
+	for _, share := range shares {
+		shareMap[share.SubscriptionID.String()] = share
+	}
+	return shareMap
+}
+
 // DashboardSummary holds the overall spending summary for a user.
 type DashboardSummary struct {
 	MonthlyTotal      int                 `json:"monthlyTotal"`
@@ -41,12 +55,13 @@ type CancelRecommendation struct {
 
 // DashboardService handles dashboard-related business logic.
 type DashboardService struct {
-	subRepo repositories.SubscriptionRepository
+	subRepo   repositories.SubscriptionRepository
+	shareRepo repositories.SubscriptionShareRepository
 }
 
 // NewDashboardService creates a new DashboardService.
-func NewDashboardService(subRepo repositories.SubscriptionRepository) *DashboardService {
-	return &DashboardService{subRepo: subRepo}
+func NewDashboardService(subRepo repositories.SubscriptionRepository, shareRepo repositories.SubscriptionShareRepository) *DashboardService {
+	return &DashboardService{subRepo: subRepo, shareRepo: shareRepo}
 }
 
 // GetSummary returns the overall spending summary for a user.
@@ -73,6 +88,9 @@ func (s *DashboardService) GetSummary(userID string) (*DashboardSummary, error) 
 		return nil, utils.ErrInternal("대시보드 데이터를 조회할 수 없습니다")
 	}
 
+	// Fetch subscription shares for the user.
+	shareMap := buildShareMap(s.shareRepo, userID)
+
 	// Calculate monthly total and category grouping.
 	monthlyTotal := 0
 	type catGroup struct {
@@ -86,7 +104,11 @@ func (s *DashboardService) GetSummary(userID string) (*DashboardSummary, error) 
 
 	for _, sub := range activeSubs {
 		monthly := sub.MonthlyAmount()
-		monthlyTotal += monthly
+		personalMonthly := monthly
+		if share, ok := shareMap[sub.ID.String()]; ok {
+			personalMonthly = share.PersonalAmount(monthly)
+		}
+		monthlyTotal += personalMonthly
 
 		catID := "uncategorized"
 		catName := "미분류"
@@ -101,14 +123,14 @@ func (s *DashboardService) GetSummary(userID string) (*DashboardSummary, error) 
 		}
 
 		if g, ok := categoryMap[catID]; ok {
-			g.amount += monthly
+			g.amount += personalMonthly
 			g.count++
 		} else {
 			categoryMap[catID] = &catGroup{
 				categoryID:   catID,
 				categoryName: catName,
 				color:        catColor,
-				amount:       monthly,
+				amount:       personalMonthly,
 				count:        1,
 			}
 		}
@@ -165,6 +187,9 @@ func (s *DashboardService) GetRecommendations(userID string) ([]*CancelRecommend
 		return []*CancelRecommendation{}, nil
 	}
 
+	// Fetch subscription shares for the user.
+	shareMap := buildShareMap(s.shareRepo, userID)
+
 	// Calculate monthly amounts and find top 20% cost threshold.
 	type subWithCost struct {
 		sub     *models.Subscription
@@ -172,7 +197,11 @@ func (s *DashboardService) GetRecommendations(userID string) ([]*CancelRecommend
 	}
 	items := make([]subWithCost, len(activeSubs))
 	for i, sub := range activeSubs {
-		items[i] = subWithCost{sub: sub, monthly: sub.MonthlyAmount()}
+		monthly := sub.MonthlyAmount()
+		if share, ok := shareMap[sub.ID.String()]; ok {
+			monthly = share.PersonalAmount(monthly)
+		}
+		items[i] = subWithCost{sub: sub, monthly: monthly}
 	}
 
 	// Sort by cost descending to find top 20% threshold.
