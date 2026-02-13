@@ -128,6 +128,10 @@ func (m *mockSubRepoForShare) FindDuplicateName(userID, serviceName string) (boo
 	return false, nil
 }
 
+func (m *mockSubRepoForShare) FindSimilarInCategory(userID string, categoryID string, excludeSubID string) ([]*models.Subscription, error) {
+	return nil, nil
+}
+
 func (m *mockSubRepoForShare) seedSubscription(userID uuid.UUID, name string) *models.Subscription {
 	sub := &models.Subscription{
 		ID:           uuid.New(),

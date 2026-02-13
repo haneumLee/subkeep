@@ -43,6 +43,29 @@ type UpdateSubscriptionRequest struct {
 	ServiceURL        *string `json:"serviceUrl" validate:"omitempty,url,max=255"`
 }
 
+// DuplicateCheckResult holds the result of duplicate/similar subscription check.
+type DuplicateCheckResult struct {
+	Duplicates     []DuplicateEntry `json:"duplicates"`
+	SimilarEntries []SimilarEntry   `json:"similarEntries"`
+}
+
+// DuplicateEntry represents a subscription that shares a normalized service name.
+type DuplicateEntry struct {
+	SubscriptionID string `json:"subscriptionId"`
+	ServiceName    string `json:"serviceName"`
+	NormalizedName string `json:"normalizedName"`
+	Amount         int    `json:"amount"`
+	BillingCycle   string `json:"billingCycle"`
+	Status         string `json:"status"`
+}
+
+// SimilarEntry represents a group of subscriptions in the same category.
+type SimilarEntry struct {
+	CategoryID    string           `json:"categoryId"`
+	CategoryName  string           `json:"categoryName"`
+	Subscriptions []DuplicateEntry `json:"subscriptions"`
+}
+
 // SubscriptionService handles business logic for subscriptions.
 type SubscriptionService struct {
 	repo repositories.SubscriptionRepository
@@ -298,4 +321,89 @@ func (s *SubscriptionService) UpdateSatisfaction(userID, subID string, score int
 	}
 
 	return updated, nil
+}
+
+// normalizeName normalizes a service name by converting to lowercase and
+// removing all whitespace.
+func normalizeName(name string) string {
+	name = strings.ToLower(name)
+	name = strings.ReplaceAll(name, " ", "")
+	name = strings.ReplaceAll(name, "\t", "")
+	return name
+}
+
+// CheckDuplicates detects duplicate and similar subscriptions for a user.
+// Duplicates: subscriptions whose normalized service names match exactly.
+// Similar: subscriptions grouped in the same category (2+ per category).
+func (s *SubscriptionService) CheckDuplicates(userID string) (*DuplicateCheckResult, error) {
+	// Fetch all subscriptions for the user (no filter, large page).
+	filter := repositories.SubscriptionFilter{
+		Page:    1,
+		PerPage: 100,
+	}
+	subs, _, err := s.repo.FindByUserID(userID, filter)
+	if err != nil {
+		slog.Error("중복 검사를 위한 구독 조회 실패", "userID", userID, "error", err)
+		return nil, utils.ErrInternal("구독 목록을 조회할 수 없습니다")
+	}
+
+	result := &DuplicateCheckResult{
+		Duplicates:     []DuplicateEntry{},
+		SimilarEntries: []SimilarEntry{},
+	}
+
+	// --- 1. Detect exact duplicates by normalized name ---
+	nameGroups := make(map[string][]DuplicateEntry)
+	for _, sub := range subs {
+		normalized := normalizeName(sub.ServiceName)
+		entry := DuplicateEntry{
+			SubscriptionID: sub.ID.String(),
+			ServiceName:    sub.ServiceName,
+			NormalizedName: normalized,
+			Amount:         sub.Amount,
+			BillingCycle:   string(sub.BillingCycle),
+			Status:         string(sub.Status),
+		}
+		nameGroups[normalized] = append(nameGroups[normalized], entry)
+	}
+
+	for _, entries := range nameGroups {
+		if len(entries) >= 2 {
+			result.Duplicates = append(result.Duplicates, entries...)
+		}
+	}
+
+	// --- 2. Detect similar subscriptions within the same category ---
+	categoryGroups := make(map[string][]DuplicateEntry)
+	categoryNames := make(map[string]string)
+	for _, sub := range subs {
+		if sub.CategoryID == nil {
+			continue
+		}
+		catID := sub.CategoryID.String()
+		entry := DuplicateEntry{
+			SubscriptionID: sub.ID.String(),
+			ServiceName:    sub.ServiceName,
+			NormalizedName: normalizeName(sub.ServiceName),
+			Amount:         sub.Amount,
+			BillingCycle:   string(sub.BillingCycle),
+			Status:         string(sub.Status),
+		}
+		categoryGroups[catID] = append(categoryGroups[catID], entry)
+		if sub.Category != nil {
+			categoryNames[catID] = sub.Category.Name
+		}
+	}
+
+	for catID, entries := range categoryGroups {
+		if len(entries) >= 2 {
+			result.SimilarEntries = append(result.SimilarEntries, SimilarEntry{
+				CategoryID:    catID,
+				CategoryName:  categoryNames[catID],
+				Subscriptions: entries,
+			})
+		}
+	}
+
+	return result, nil
 }

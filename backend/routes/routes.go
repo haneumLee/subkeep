@@ -43,6 +43,7 @@ func SetupRoutes(app *fiber.App, h *Handlers) {
 	subs := protected.Group("/subscriptions")
 	subs.Get("/", h.Subscription.GetAll)
 	subs.Post("/", h.Subscription.Create)
+	subs.Get("/duplicates", h.Subscription.CheckDuplicates)
 	subs.Get("/:id", h.Subscription.GetByID)
 	subs.Put("/:id", h.Subscription.Update)
 	subs.Delete("/:id", h.Subscription.Delete)

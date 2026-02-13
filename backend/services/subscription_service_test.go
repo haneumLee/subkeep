@@ -175,6 +175,10 @@ func (m *mockSubscriptionRepo) FindDuplicateName(userID, serviceName string) (bo
 	return false, nil
 }
 
+func (m *mockSubscriptionRepo) FindSimilarInCategory(userID string, categoryID string, excludeSubID string) ([]*models.Subscription, error) {
+	return nil, nil
+}
+
 // seedSubscription inserts a subscription into the mock repo and returns it.
 func (m *mockSubscriptionRepo) seedSubscription(userID uuid.UUID, name string, amount int, cycle models.BillingCycle) *models.Subscription {
 	sub := &models.Subscription{
@@ -615,5 +619,187 @@ func TestUpdateSatisfaction(t *testing.T) {
 
 		_, err := svc.UpdateSatisfaction(userID.String(), uuid.New().String(), 3)
 		assertAppErrorCode(t, err, http.StatusNotFound)
+	})
+}
+
+// seedSubscriptionWithCategory inserts a subscription with a category into the mock repo.
+func seedSubscriptionWithCategory(repo *mockSubscriptionRepo, userID uuid.UUID, name string, amount int, cycle models.BillingCycle, category *models.Category) *models.Subscription {
+	sub := repo.seedSubscription(userID, name, amount, cycle)
+	if category != nil {
+		sub.CategoryID = &category.ID
+		sub.Category = category
+	}
+	return sub
+}
+
+func TestCheckDuplicates(t *testing.T) {
+	userID := uuid.New()
+
+	makeCategory := func(name string) *models.Category {
+		return &models.Category{
+			ID:   uuid.New(),
+			Name: name,
+		}
+	}
+
+	t.Run("returns empty result when no subscriptions", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertNotNil(t, result)
+		assertEqual(t, len(result.Duplicates), 0)
+		assertEqual(t, len(result.SimilarEntries), 0)
+	})
+
+	t.Run("returns empty result when no duplicates", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		repo.seedSubscription(userID, "Netflix", 17000, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "Spotify", 10900, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "YouTube", 14900, models.BillingCycleMonthly)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 0)
+		assertEqual(t, len(result.SimilarEntries), 0)
+	})
+
+	t.Run("detects exact name duplicates", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		repo.seedSubscription(userID, "Netflix", 17000, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "Netflix", 13000, models.BillingCycleMonthly)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 2)
+	})
+
+	t.Run("detects duplicates with case normalization", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		repo.seedSubscription(userID, "Netflix", 17000, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "netflix", 13000, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "NETFLIX", 10000, models.BillingCycleYearly)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 3)
+	})
+
+	t.Run("detects duplicates with whitespace normalization", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		repo.seedSubscription(userID, "You Tube", 14900, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "YouTube", 14900, models.BillingCycleMonthly)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 2)
+	})
+
+	t.Run("detects similar subscriptions in same category", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+		cat := makeCategory("음악")
+
+		seedSubscriptionWithCategory(repo, userID, "Spotify", 10900, models.BillingCycleMonthly, cat)
+		seedSubscriptionWithCategory(repo, userID, "Apple Music", 10900, models.BillingCycleMonthly, cat)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 0)
+		assertEqual(t, len(result.SimilarEntries), 1)
+		assertEqual(t, result.SimilarEntries[0].CategoryName, "음악")
+		assertEqual(t, len(result.SimilarEntries[0].Subscriptions), 2)
+	})
+
+	t.Run("does not flag single subscription in category as similar", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+		cat := makeCategory("영상")
+
+		seedSubscriptionWithCategory(repo, userID, "Netflix", 17000, models.BillingCycleMonthly, cat)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.SimilarEntries), 0)
+	})
+
+	t.Run("ignores subscriptions without category for similar detection", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		repo.seedSubscription(userID, "Netflix", 17000, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "Spotify", 10900, models.BillingCycleMonthly)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.SimilarEntries), 0)
+	})
+
+	t.Run("returns both duplicates and similar entries", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+		cat := makeCategory("영상")
+
+		// Same name duplicates in same category
+		seedSubscriptionWithCategory(repo, userID, "Netflix", 17000, models.BillingCycleMonthly, cat)
+		seedSubscriptionWithCategory(repo, userID, "Netflix", 13000, models.BillingCycleMonthly, cat)
+		// Different name in same category
+		seedSubscriptionWithCategory(repo, userID, "Disney+", 9900, models.BillingCycleMonthly, cat)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		// 2 duplicates (Netflix x2)
+		assertEqual(t, len(result.Duplicates), 2)
+		// 1 similar group with 3 subscriptions (Netflix x2 + Disney+)
+		assertEqual(t, len(result.SimilarEntries), 1)
+		assertEqual(t, len(result.SimilarEntries[0].Subscriptions), 3)
+	})
+
+	t.Run("handles multiple categories correctly", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+		videoCat := makeCategory("영상")
+		musicCat := makeCategory("음악")
+
+		seedSubscriptionWithCategory(repo, userID, "Netflix", 17000, models.BillingCycleMonthly, videoCat)
+		seedSubscriptionWithCategory(repo, userID, "Disney+", 9900, models.BillingCycleMonthly, videoCat)
+		seedSubscriptionWithCategory(repo, userID, "Spotify", 10900, models.BillingCycleMonthly, musicCat)
+		seedSubscriptionWithCategory(repo, userID, "Apple Music", 10900, models.BillingCycleMonthly, musicCat)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 0)
+		assertEqual(t, len(result.SimilarEntries), 2)
+	})
+
+	t.Run("duplicate entries include correct fields", func(t *testing.T) {
+		repo := newMockRepo()
+		svc := NewSubscriptionService(repo)
+
+		repo.seedSubscription(userID, "Netflix", 17000, models.BillingCycleMonthly)
+		repo.seedSubscription(userID, "Netflix", 13000, models.BillingCycleYearly)
+
+		result, err := svc.CheckDuplicates(userID.String())
+		assertNil(t, err)
+		assertEqual(t, len(result.Duplicates), 2)
+
+		for _, dup := range result.Duplicates {
+			assertEqual(t, dup.NormalizedName, "netflix")
+			if dup.ServiceName != "Netflix" {
+				t.Errorf("expected ServiceName 'Netflix', got %q", dup.ServiceName)
+			}
+			if dup.SubscriptionID == "" {
+				t.Error("expected non-empty SubscriptionID")
+			}
+		}
 	})
 }
