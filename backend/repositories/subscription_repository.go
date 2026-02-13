@@ -44,6 +44,7 @@ type SubscriptionRepository interface {
 	Restore(id string) error // 소프트 삭제 복원 (deleted_at = NULL)
 	CountByUserID(userID string) (int64, error)
 	FindDuplicateName(userID, serviceName string) (bool, error)
+	FindSimilarInCategory(userID string, categoryID string, excludeSubID string) ([]*models.Subscription, error)
 }
 
 // subscriptionRepository is the GORM implementation of SubscriptionRepository.
@@ -172,4 +173,22 @@ func (r *subscriptionRepository) FindDuplicateName(userID, serviceName string) (
 		return false, fmt.Errorf("find duplicate subscription name: %w", err)
 	}
 	return count > 0, nil
+}
+
+// FindSimilarInCategory retrieves subscriptions in the same category for a user,
+// optionally excluding a specific subscription.
+func (r *subscriptionRepository) FindSimilarInCategory(userID string, categoryID string, excludeSubID string) ([]*models.Subscription, error) {
+	query := r.db.Model(&models.Subscription{}).
+		Preload("Category").
+		Where("user_id = ? AND category_id = ?", userID, categoryID)
+
+	if excludeSubID != "" {
+		query = query.Where("id != ?", excludeSubID)
+	}
+
+	var subs []*models.Subscription
+	if err := query.Find(&subs).Error; err != nil {
+		return nil, fmt.Errorf("find similar subscriptions in category: %w", err)
+	}
+	return subs, nil
 }

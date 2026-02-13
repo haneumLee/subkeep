@@ -48,6 +48,9 @@ func (m *mockSubRepoForCalendar) Delete(id string) error                        
 func (m *mockSubRepoForCalendar) Restore(id string) error                            { return nil }
 func (m *mockSubRepoForCalendar) CountByUserID(userID string) (int64, error)         { return 0, nil }
 func (m *mockSubRepoForCalendar) FindDuplicateName(userID, name string) (bool, error) { return false, nil }
+func (m *mockSubRepoForCalendar) FindSimilarInCategory(userID string, categoryID string, excludeSubID string) ([]*models.Subscription, error) {
+	return nil, nil
+}
 
 type mockShareRepoForCalendar struct {
 	shares map[string]*models.SubscriptionShare

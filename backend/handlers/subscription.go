@@ -190,6 +190,24 @@ func (h *SubscriptionHandler) Delete(c *fiber.Ctx) error {
 	return utils.NoContent(c)
 }
 
+// CheckDuplicates handles GET /api/v1/subscriptions/duplicates.
+func (h *SubscriptionHandler) CheckDuplicates(c *fiber.Ctx) error {
+	userID, err := getUserID(c)
+	if err != nil {
+		return utils.Error(c, err.(*utils.AppError))
+	}
+
+	result, svcErr := h.service.CheckDuplicates(userID)
+	if svcErr != nil {
+		if appErr, ok := svcErr.(*utils.AppError); ok {
+			return utils.Error(c, appErr)
+		}
+		return utils.Error(c, utils.ErrInternal(""))
+	}
+
+	return utils.Success(c, result)
+}
+
 // satisfactionRequest holds the body for updating satisfaction score.
 type satisfactionRequest struct {
 	Score int `json:"score"`

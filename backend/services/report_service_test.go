@@ -49,6 +49,9 @@ func (m *mockSubRepoForReport) Delete(id string) error                          
 func (m *mockSubRepoForReport) Restore(id string) error                            { return nil }
 func (m *mockSubRepoForReport) CountByUserID(userID string) (int64, error)         { return 0, nil }
 func (m *mockSubRepoForReport) FindDuplicateName(userID, name string) (bool, error) { return false, nil }
+func (m *mockSubRepoForReport) FindSimilarInCategory(userID string, categoryID string, excludeSubID string) ([]*models.Subscription, error) {
+	return nil, nil
+}
 
 type mockShareRepoForReport struct {
 	shares map[string]*models.SubscriptionShare
