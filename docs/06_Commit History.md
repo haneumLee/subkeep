@@ -222,6 +222,28 @@ frontend/nginx.conf
 
 ---
 
+#### `9750480` - feat(subscription): F-11 중복/유사 구독 감지 API 구현 및 단위 테스트
+**Author**: Claude Opus 4.6 (Co-authored)  
+**Branch**: feature/duplicate-subscription-detection  
+**Type**: Feature Implementation + Testing
+
+**주요 변경사항:**
+- ✅ Repository: FindSimilarInCategory 메서드 추가 (카테고리별 유사 구독 조회)
+- ✅ Service: CheckDuplicates 메서드 구현 (정규화 기반 중복 감지 + 카테고리별 유사 감지)
+- ✅ Service: normalizeName 헬퍼 함수 (소문자 변환, 공백 제거)
+- ✅ Service: DuplicateCheckResult, DuplicateEntry, SimilarEntry 타입 정의
+- ✅ Handler: GET /api/v1/subscriptions/duplicates 엔드포인트 추가
+- ✅ Route: /duplicates 라우트 등록 (/:id 충돌 방지를 위해 상단 배치)
+- ✅ 테스트 mock 4개 파일 인터페이스 정합성 업데이트
+- ✅ CheckDuplicates 단위 테스트 11개 작성 (전체 통과)
+- 📎 Refs: F-11, E1-1~E1-7
+
+**Stats:**
+- 8 files changed
+- 342 insertions(+)
+
+---
+
 ## Commit Convention
 
 이 프로젝트는 [Conventional Commits](https://www.conventionalcommits.org/) 규칙을 따릅니다.
@@ -281,9 +303,9 @@ docs: README 설치 가이드 업데이트
 ## Statistics
 
 ### 전체 통계
-- Total Commits: 9 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc, dc61fed, e985dcd, fcbe252)
-- Contributors: 1
-- Branches: 5 (main, dev, feature/backend-init-auth, feature/dashboard-simulation, feature/backend-integration)
+- Total Commits: 10 (e205c09, dad6813, cbb530c, 4de11b0, 737a7a2, c70fbbc, dc61fed, e985dcd, fcbe252, 9750480)
+- Contributors: 2
+- Branches: 6 (main, dev, feature/backend-init-auth, feature/dashboard-simulation, feature/backend-integration, feature/duplicate-subscription-detection)
 - Tags: 0
 
 ### 브랜치별 커밋 수
@@ -298,6 +320,7 @@ docs: README 설치 가이드 업데이트
 ## Contributors
 
 - **haneumLee** (2haneum@naver.com) - 1 commits
+- **Claude Opus 4.6** (Co-authored) - 1 commits
 
 ---
 
