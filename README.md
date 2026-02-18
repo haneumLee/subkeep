@@ -39,19 +39,24 @@ SubKeep은 단순한 구독 관리를 넘어, **구독 유지/해지 판단을 �
 ## 🛠 Tech Stack
 
 ### Backend
-- **Language**: Go 1.22+
-- **Framework**: Gin (HTTP), GORM (ORM)
+- **Language**: Go 1.22
+- **Framework**: Fiber v2 (HTTP)
+- **ORM**: GORM
 - **Database**: PostgreSQL 15
-- **Cache**: Redis 7
+- **Auth**: golang-jwt/jwt v5
+- **Validation**: go-playground/validator v10
 - **Migration**: golang-migrate
-- **Testing**: testify, gomock
+- **Config**: godotenv
 
 ### Frontend
-- **Language**: TypeScript
-- **Framework**: React 18 + Vite
-- **State Management**: TBD (Zustand/Redux)
-- **UI Library**: TBD (Material-UI/Tailwind)
+- **Language**: TypeScript 5.7
+- **Framework**: Next.js 14 (App Router) + React 18
+- **Styling**: Tailwind CSS 3.4
+- **State/Data Fetching**: TanStack React Query 5
+- **Form**: React Hook Form + Zod (validation)
 - **HTTP Client**: Axios
+- **Utilities**: date-fns, clsx, tailwind-merge
+- **Testing**: Jest 29, Testing Library
 
 ### Infrastructure
 - **Containerization**: Docker, Docker Compose
@@ -61,10 +66,10 @@ SubKeep은 단순한 구독 관리를 넘어, **구독 유지/해지 판단을 �
 - **Version Control**: Git (Git Flow)
 
 ### Development Tools
-- **Linting**: golangci-lint, ESLint, Prettier
+- **Backend Linting**: golangci-lint
+- **Frontend Linting**: ESLint, Prettier
+- **Git Hooks**: Husky, commitlint
 - **API Docs**: Swagger/OpenAPI
-- **Database**: PostgreSQL, Redis
-- **Testing**: Go test, Jest/Vitest
 
 ## 🏗 Architecture
 
